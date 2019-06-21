@@ -41,7 +41,7 @@ class  TopicDataType {
             : m_typeSize(0), m_isGetKeyDefined(false)
         {}
 
-        RTPS_DllAPI virtual ~TopicDataType(){};
+        RTPS_DllAPI virtual ~TopicDataType() {}
         /**
          * Serialize method, it should be implemented by the user, since it is abstract.
          * It is VERY IMPORTANT that the user sets the serializedPaylaod length correctly.
@@ -76,9 +76,10 @@ class  TopicDataType {
          * Get the key associated with the data.
          * @param[in] data Pointer to the data.
          * @param[out] ihandle Pointer to the Handle.
+         * @param[in] force_md5 Force MD5 checking.
          * @return True if correct.
          */
-        RTPS_DllAPI virtual bool getKey(void* data, rtps::InstanceHandle_t* ihandle){ (void) data; (void) ihandle; return false; }
+        RTPS_DllAPI virtual bool getKey(void* data, rtps::InstanceHandle_t* ihandle, bool force_md5 = false) = 0;
 
         /**
          * Set topic data type name

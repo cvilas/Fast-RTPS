@@ -27,6 +27,7 @@
 #include <fastrtps/rtps/reader/StatefulReader.h>
 
 #include <fastrtps/rtps/history/ReaderHistory.h>
+#include <fastrtps/rtps/history/WriterHistory.h>
 
 #include <fastrtps/rtps/common/InstanceHandle.h>
 
@@ -40,54 +41,52 @@ namespace eprosima {
 namespace fastrtps{
 namespace rtps {
 
-void EDPSimplePUBListener::onNewCacheChangeAdded(RTPSReader* reader, const CacheChange_t* const change_in)
+void EDPSimplePUBListener::onNewCacheChangeAdded(
+        RTPSReader* reader,
+        const CacheChange_t * const change_in)
 {
     CacheChange_t* change = (CacheChange_t*)change_in;
-    //std::lock_guard<std::recursive_mutex> guard(*this->mp_SEDP->mp_PubReader.first->getMutex());
+    //std::lock_guard<std::recursive_mutex> guard(*this->sedp_->publications_reader_.first->getMutex());
     logInfo(RTPS_EDP,"");
     if(!computeKey(change))
     {
         logWarning(RTPS_EDP,"Received change with no Key");
     }
 
-    //Call the slave, if it exists
-    attached_listener_mutex.lock();
-    if(attached_listener != nullptr)
-        attached_listener->onNewCacheChangeAdded(this->mp_SEDP->mp_PubReader.first, change_in);
-    attached_listener_mutex.unlock();
+    ReaderHistory* reader_history =
+#if HAVE_SECURITY
+        reader == sedp_->publications_secure_reader_.first ?
+        sedp_->publications_secure_reader_.second :
+#endif
+        sedp_->publications_reader_.second;
 
     if(change->kind == ALIVE)
     {
         //LOAD INFORMATION IN TEMPORAL WRITER PROXY DATA
         WriterProxyData writerProxyData;
-        CDRMessage_t tempMsg(0);
-        tempMsg.wraps = true;
-        tempMsg.msg_endian = change_in->serializedPayload.encapsulation == PL_CDR_BE ? BIGEND : LITTLEEND;
-        tempMsg.length = change_in->serializedPayload.length;
-        tempMsg.max_size = change_in->serializedPayload.max_size;
-        tempMsg.buffer = change_in->serializedPayload.data;
+        CDRMessage_t tempMsg(change_in->serializedPayload);
 
         if(writerProxyData.readFromCDRMessage(&tempMsg))
         {
             change->instanceHandle = writerProxyData.key();
-            if(writerProxyData.guid().guidPrefix == mp_SEDP->mp_RTPSParticipant->getGuid().guidPrefix)
+            if(writerProxyData.guid().guidPrefix == sedp_->mp_RTPSParticipant->getGuid().guidPrefix)
             {
                 logInfo(RTPS_EDP,"Message from own RTPSParticipant, ignoring");
-                mp_SEDP->mp_PubReader.second->remove_change(change);
+                reader_history->remove_change(change);
                 return;
             }
 
             //LOOK IF IS AN UPDATED INFORMATION
             ParticipantProxyData pdata;
-            if(this->mp_SEDP->mp_PDP->addWriterProxyData(&writerProxyData, pdata)) //ADDED NEW DATA
+            if(this->sedp_->mp_PDP->addWriterProxyData(&writerProxyData, pdata)) //ADDED NEW DATA
             {
                 // At this point we can release reader lock, cause change is not used
-                reader->getMutex()->unlock();
+                reader->getMutex().unlock();
 
-                mp_SEDP->pairing_writer_proxy_with_any_local_reader(&pdata, &writerProxyData);
+                sedp_->pairing_writer_proxy_with_any_local_reader(&pdata, &writerProxyData);
 
                 // Take again the reader lock.
-                reader->getMutex()->lock();
+                reader->getMutex().lock();
             }
             else //NOT ADDED BECAUSE IT WAS ALREADY THERE
             {
@@ -101,11 +100,11 @@ void EDPSimplePUBListener::onNewCacheChangeAdded(RTPSReader* reader, const Cache
         logInfo(RTPS_EDP,"Disposed Remote Writer, removing...");
 
         GUID_t auxGUID = iHandle2GUID(change->instanceHandle);
-        this->mp_SEDP->mp_PDP->removeWriterProxyData(auxGUID);
+        this->sedp_->mp_PDP->removeWriterProxyData(auxGUID);
     }
 
     //Removing change from history
-    this->mp_SEDP->mp_PubReader.second->remove_change(change);
+    reader_history->remove_change(change);
 
     return;
 }
@@ -120,54 +119,52 @@ bool EDPSimpleSUBListener::computeKey(CacheChange_t* change)
     return ParameterList::readInstanceHandleFromCDRMsg(change, PID_ENDPOINT_GUID);
 }
 
-void EDPSimpleSUBListener::onNewCacheChangeAdded(RTPSReader* reader, const CacheChange_t* const change_in)
+void EDPSimpleSUBListener::onNewCacheChangeAdded(
+        RTPSReader* reader,
+        const CacheChange_t * const change_in)
 {
     CacheChange_t* change = (CacheChange_t*)change_in;
-    //std::lock_guard<std::recursive_mutex> guard(*this->mp_SEDP->mp_SubReader.first->getMutex());
+    //std::lock_guard<std::recursive_mutex> guard(*this->sedp_->subscriptions_reader_.first->getMutex());
     logInfo(RTPS_EDP,"");
     if(!computeKey(change))
     {
         logWarning(RTPS_EDP,"Received change with no Key");
     }
 
-    //Call the slave, if it exists
-    attached_listener_mutex.lock();
-    if(attached_listener != nullptr)
-        attached_listener->onNewCacheChangeAdded(this->mp_SEDP->mp_SubReader.first, change);
-    attached_listener_mutex.unlock();
+    ReaderHistory* reader_history =
+#if HAVE_SECURITY
+        reader == sedp_->subscriptions_secure_reader_.first ?
+        sedp_->subscriptions_secure_reader_.second :
+#endif
+        sedp_->subscriptions_reader_.second;
 
     if(change->kind == ALIVE)
     {
         //LOAD INFORMATION IN TEMPORAL WRITER PROXY DATA
         ReaderProxyData readerProxyData;
-        CDRMessage_t tempMsg(0);
-        tempMsg.wraps = true;
-        tempMsg.msg_endian = change_in->serializedPayload.encapsulation == PL_CDR_BE ? BIGEND : LITTLEEND;
-        tempMsg.length = change_in->serializedPayload.length;
-        tempMsg.max_size = change_in->serializedPayload.max_size;
-        tempMsg.buffer = change_in->serializedPayload.data;
+        CDRMessage_t tempMsg(change_in->serializedPayload);
 
         if(readerProxyData.readFromCDRMessage(&tempMsg))
         {
             change->instanceHandle = readerProxyData.key();
-            if(readerProxyData.guid().guidPrefix == mp_SEDP->mp_RTPSParticipant->getGuid().guidPrefix)
+            if(readerProxyData.guid().guidPrefix == sedp_->mp_RTPSParticipant->getGuid().guidPrefix)
             {
                 logInfo(RTPS_EDP,"From own RTPSParticipant, ignoring");
-                mp_SEDP->mp_SubReader.second->remove_change(change);
+                reader_history->remove_change(change);
                 return;
             }
 
             //LOOK IF IS AN UPDATED INFORMATION
             ParticipantProxyData pdata;
-            if(this->mp_SEDP->mp_PDP->addReaderProxyData(&readerProxyData, pdata)) //ADDED NEW DATA
+            if(this->sedp_->mp_PDP->addReaderProxyData(&readerProxyData, pdata)) //ADDED NEW DATA
             {
                 // At this point we can release reader lock, cause change is not used
-                reader->getMutex()->unlock();
+                reader->getMutex().unlock();
 
-                mp_SEDP->pairing_reader_proxy_with_any_local_writer(&pdata, &readerProxyData);
+                sedp_->pairing_reader_proxy_with_any_local_writer(&pdata, &readerProxyData);
 
                 // Take again the reader lock.
-                reader->getMutex()->lock();
+                reader->getMutex().lock();
             }
             else
             {
@@ -181,13 +178,48 @@ void EDPSimpleSUBListener::onNewCacheChangeAdded(RTPSReader* reader, const Cache
         logInfo(RTPS_EDP,"Disposed Remote Reader, removing...");
 
         GUID_t auxGUID = iHandle2GUID(change->instanceHandle);
-        this->mp_SEDP->mp_PDP->removeReaderProxyData(auxGUID);
+        this->sedp_->mp_PDP->removeReaderProxyData(auxGUID);
     }
 
     // Remove change from history.
-    this->mp_SEDP->mp_SubReader.second->remove_change(change);
+    reader_history->remove_change(change);
 
     return;
+}
+
+void EDPSimplePUBListener::onWriterChangeReceivedByAll(RTPSWriter* writer, CacheChange_t* change)
+{
+    (void)writer;
+
+    if(ChangeKind_t::NOT_ALIVE_DISPOSED_UNREGISTERED == change->kind)
+    {
+        WriterHistory* writer_history =
+#if HAVE_SECURITY
+            writer == sedp_->publications_secure_writer_.first ?
+            sedp_->publications_secure_writer_.second :
+#endif
+            sedp_->publications_writer_.second;
+
+        writer_history->remove_change(change);
+    }
+}
+
+void EDPSimpleSUBListener::onWriterChangeReceivedByAll(RTPSWriter* writer, CacheChange_t* change)
+{
+    (void)writer;
+
+    if(ChangeKind_t::NOT_ALIVE_DISPOSED_UNREGISTERED == change->kind)
+    {
+        WriterHistory* writer_history =
+#if HAVE_SECURITY
+            writer == sedp_->subscriptions_secure_writer_.first ?
+            sedp_->subscriptions_secure_writer_.second :
+#endif
+            sedp_->subscriptions_writer_.second;
+
+        writer_history->remove_change(change);
+    }
+
 }
 
 } /* namespace rtps */

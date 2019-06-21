@@ -27,6 +27,7 @@ namespace fastrtps{
 namespace rtps{
 
 class RTPSWriter;
+struct CacheChange_t;
 
 /**
 * Class WriterListener with virtual method so the user can implement callbacks to certain events.
@@ -34,20 +35,42 @@ class RTPSWriter;
 */
 class RTPS_DllAPI WriterListener
 {
-public:
-	WriterListener(){};
-	virtual ~WriterListener(){};
-	
-	/**
-	* This method is called when a new Reader is matched with this Writer by hte builtin protocols
-	* @param writer Pointer to the RTPSWriter.
-	* @param info Matching Information.
-	*/
-	virtual void onWriterMatched(RTPSWriter* writer,MatchingInfo& info){(void)writer; (void)info;};
+    public:
+        WriterListener() = default;
+
+        virtual ~WriterListener() = default;
+
+        /**
+         * This method is called when a new Reader is matched with this Writer by hte builtin protocols
+         * @param writer Pointer to the RTPSWriter.
+         * @param info Matching Information.
+         */
+        virtual void onWriterMatched(
+                RTPSWriter* writer,
+                MatchingInfo& info)
+        {
+            (void)writer;
+            (void)info;
+        }
+
+        /**
+         * This method is called when all the readers matched with this Writer acknowledge that a cache 
+         * change has been received.
+         * @param writer Pointer to the RTPSWriter.
+         * @param change Pointer to the affected CacheChange_t.
+         */
+        virtual void onWriterChangeReceivedByAll(
+                RTPSWriter* writer, 
+                CacheChange_t* change)
+        {
+            (void)writer;
+            (void)change;
+        }
 };
-}
-}
-}
+
+} /* namespace rtps */
+}  /* namespace fastrtps */
+}  /* namespace eprosima */
 
 
 

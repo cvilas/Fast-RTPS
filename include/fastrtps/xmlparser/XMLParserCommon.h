@@ -33,16 +33,42 @@ enum class XMLP_ret
 };
 
 
+extern const char* DEFAULT_FASTRTPS_ENV_VARIABLE;
 extern const char* DEFAULT_FASTRTPS_PROFILES;
 
 extern const char* ROOT;
 extern const char* PROFILES;
+extern const char* TRANSPORT_DESCRIPTORS;
 extern const char* PROFILE_NAME;
 extern const char* DEFAULT_PROF;
 extern const char* PARTICIPANT;
 extern const char* PUBLISHER;
 extern const char* SUBSCRIBER;
 extern const char* RTPS;
+extern const char* TYPES;
+extern const char* LOG;
+
+extern const char* TRANSPORT_DESCRIPTOR;
+extern const char* TRANSPORT_ID;
+extern const char* UDP_OUTPUT_PORT;
+extern const char* TCP_WAN_ADDR;
+extern const char* RECEIVE_BUFFER_SIZE;
+extern const char* SEND_BUFFER_SIZE;
+extern const char* TTL;
+extern const char* NON_BLOCKING_SEND;
+extern const char* WHITE_LIST;
+extern const char* MAX_MESSAGE_SIZE;
+extern const char* MAX_INITIAL_PEERS_RANGE;
+extern const char* KEEP_ALIVE_FREQUENCY;
+extern const char* KEEP_ALIVE_TIMEOUT;
+extern const char* MAX_LOGICAL_PORT;
+extern const char* LOGICAL_PORT_RANGE;
+extern const char* LOGICAL_PORT_INCREMENT;
+extern const char* ENABLE_TCP_NODELAY;
+extern const char* METADATA_LOGICAL_PORT;
+extern const char* LISTENING_PORTS;
+extern const char* CALCULATE_CRC;
+extern const char* CHECK_CRC;
 
 extern const char* QOS_PROFILE;
 extern const char* APPLICATION;
@@ -54,12 +80,13 @@ extern const char* DATA_READER;
 /// RTPS Participant attributes
 extern const char* DEF_UNI_LOC_LIST;
 extern const char* DEF_MULTI_LOC_LIST;
-extern const char* DEF_OUT_LOC_LIST;
-extern const char* DEF_SEND_PORT;
 extern const char* SEND_SOCK_BUF_SIZE;
 extern const char* LIST_SOCK_BUF_SIZE;
 extern const char* BUILTIN;
 extern const char* PORT;
+extern const char* PORTS;
+extern const char* LOGICAL_PORT;
+extern const char* PHYSICAL_PORT;
 extern const char* USER_DATA;
 extern const char* PART_ID;
 extern const char* IP4_TO_SEND;
@@ -76,13 +103,14 @@ extern const char* QOS;
 extern const char* TIMES;
 extern const char* UNI_LOC_LIST;
 extern const char* MULTI_LOC_LIST;
-extern const char* OUT_LOC_LIST;
+extern const char* REM_LOC_LIST;
 //extern const char* THROUGHPUT_CONT;
 extern const char* EXP_INLINE_QOS;
 extern const char* HIST_MEM_POLICY;
 //extern const char* PROPERTIES_POLICY;
 extern const char* USER_DEF_ID;
 extern const char* ENTITY_ID;
+extern const char* MATCHED_SUBSCRIBERS_ALLOCATION;
 
 ///
 extern const char* PROPERTIES;
@@ -94,11 +122,19 @@ extern const char* PREALLOCATED;
 extern const char* PREALLOCATED_WITH_REALLOC;
 extern const char* DYNAMIC;
 extern const char* LOCATOR;
+extern const char* UDPv4_LOCATOR;
+extern const char* UDPv6_LOCATOR;
+extern const char* TCPv4_LOCATOR;
+extern const char* TCPv6_LOCATOR;
 extern const char* KIND;
 extern const char* ADDRESS;
+extern const char* UNIQUE_LAN_ID;
+extern const char* WAN_ADDRESS;
 extern const char* RESERVED;
 extern const char* UDPv4;
 extern const char* UDPv6;
+extern const char* TCPv4;
+extern const char* TCPv6;
 extern const char* INIT_ACKNACK_DELAY;
 extern const char* HEARTB_RESP_DELAY;
 extern const char* INIT_HEARTB_DELAY;
@@ -107,11 +143,11 @@ extern const char* NACK_RESP_DELAY;
 extern const char* NACK_SUPRESSION;
 extern const char* BY_NAME;
 extern const char* BY_VAL;
-extern const char* _INFINITE;
-extern const char* ZERO;
-extern const char* INVALID;
+extern const char* DURATION_INFINITY;
+extern const char* DURATION_INFINITE_SEC;
+extern const char* DURATION_INFINITE_NSEC;
 extern const char* SECONDS;
-extern const char* FRACTION;
+extern const char* NANOSECONDS;
 extern const char* SHARED;
 extern const char* EXCLUSIVE;
 
@@ -132,6 +168,7 @@ extern const char* PARTITION;
 extern const char* TOPIC_DATA;
 extern const char* GROUP_DATA;
 extern const char* PUB_MODE;
+extern const char* DISABLE_POSITIVE_ACKS;
 
 extern const char* SYNCHRONOUS;
 extern const char* ASYNCHRONOUS;
@@ -196,7 +233,11 @@ extern const char* STATIC;
 extern const char* PUBWRITER_SUBREADER;
 extern const char* PUBREADER_SUBWRITER;
 extern const char* STATIC_ENDPOINT_XML;
+extern const char* READER_HIST_MEM_POLICY;
+extern const char* WRITER_HIST_MEM_POLICY;
+extern const char* MUTATION_TRIES;
 extern const char* ACCESS_SCOPE;
+extern const char* ENABLED;
 
 // Endpoint parser
 extern const char* STATICDISCOVERY;
@@ -232,6 +273,102 @@ extern const char* _TRANSIENT_LOCAL_DURABILITY_QOS;
 extern const char* _VOLATILE_DURABILITY_QOS;
 extern const char* STRENGTH;
 
+// TYPES parser
+extern const char* BOOLEAN;
+extern const char* CHAR;
+extern const char* WCHAR;
+extern const char* TBYTE;
+extern const char* SHORT;
+extern const char* LONG;
+extern const char* USHORT;
+extern const char* ULONG;
+extern const char* LONGLONG;
+extern const char* ULONGLONG;
+extern const char* FLOAT;
+extern const char* DOUBLE;
+extern const char* LONGDOUBLE;
+extern const char* STRING;
+extern const char* WSTRING;
+extern const char* LITERAL;
+extern const char* STRUCT;
+extern const char* UNION;
+extern const char* SEQUENCE;
+extern const char* MAP;
+extern const char* TYPEDEF;
+extern const char* BITSET;
+extern const char* BITMASK;
+extern const char* ENUM;
+extern const char* CASE;
+extern const char* DEFAULT;
+extern const char* DISCRIMINATOR;
+extern const char* CASE_DISCRIMINATOR;
+extern const char* ARRAY_DIMENSIONS;
+extern const char* STR_MAXLENGTH;
+extern const char* SEQ_MAXLENGTH;
+extern const char* MAP_MAXLENGTH;
+extern const char* MAP_KEY_TYPE;
+extern const char* ENUMERATOR;
+extern const char* NON_BASIC_TYPE;
+extern const char* NON_BASIC_TYPE_NAME;
+extern const char* KEY;
+extern const char* MEMBER;
+extern const char* BITFIELD;
+extern const char* BIT_VALUE;
+extern const char* POSITION;
+extern const char* BIT_BOUND;
+extern const char* BASE_TYPE;
+
+// LOG
+extern const char* USE_DEFAULT;
+extern const char* CONSUMER;
+extern const char* CLASS;
+
+// Allocation config
+extern const char* INITIAL;
+extern const char* MAXIMUM;
+extern const char* INCREMENT;
+
+// TLS Config
+extern const char* TLS;
+extern const char* TLS_PASSWORD;
+extern const char* TLS_OPTIONS;
+extern const char* TLS_CERT_CHAIN_FILE;
+extern const char* TLS_PRIVATE_KEY_FILE;
+extern const char* TLS_TMP_DH_FILE;
+extern const char* TLS_VERIFY_FILE;
+extern const char* TLS_VERIFY_MODE;
+extern const char* TLS_VERIFY_PATHS;
+extern const char* TLS_DEFAULT_VERIFY_PATH;
+extern const char* TLS_VERIFY_DEPTH;
+extern const char* TLS_RSA_PRIVATE_KEY_FILE;
+extern const char* TLS_HANDSHAKE_ROLE;
+
+// TLS HandShake Role
+extern const char* TLS_HANDSHAKE_ROLE_DEFAULT;
+extern const char* TLS_HANDSHAKE_ROLE_CLIENT;
+extern const char* TLS_HANDSHAKE_ROLE_SERVER;
+
+// TLS Verify Stuff
+extern const char* TLS_VERIFY_PATH;
+extern const char* TLS_VERIFY;
+
+// TLS Options
+extern const char* TLS_OPTION;
+extern const char* TLS_DEFAULT_WORKAROUNDS;
+extern const char* TLS_NO_COMPRESSION;
+extern const char* TLS_NO_SSLV2;
+extern const char* TLS_NO_SSLV3;
+extern const char* TLS_NO_TLSV1;
+extern const char* TLS_NO_TLSV1_1;
+extern const char* TLS_NO_TLSV1_2;
+extern const char* TLS_NO_TLSV1_3;
+extern const char* TLS_SINGLE_DH_USE;
+
+// TLS Verify Mode
+extern const char* TLS_VERIFY_NONE;
+extern const char* TLS_VERIFY_PEER;
+extern const char* TLS_VERIFY_FAIL_IF_NO_PEER_CERT;
+extern const char* TLS_VERIFY_CLIENT_ONCE;
 
 } /* xmlparser */
 } /* namespace */

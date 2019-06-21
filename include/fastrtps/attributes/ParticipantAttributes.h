@@ -22,8 +22,6 @@
 
 #include "../rtps/attributes/RTPSParticipantAttributes.h"
 
-
-
 namespace eprosima{
 namespace fastrtps{
 
@@ -35,16 +33,21 @@ namespace fastrtps{
  */
 class ParticipantAttributes
 {
-public:
-	ParticipantAttributes(){};
-	virtual ~ParticipantAttributes(){};
-	//!Attributes of the associated RTPSParticipant.
-	rtps::RTPSParticipantAttributes rtps;
+    public:
+        //!Attributes of the associated RTPSParticipant.
+        rtps::RTPSParticipantAttributes rtps;
+
+        ParticipantAttributes() {}
+
+        virtual ~ParticipantAttributes() {}
+
+        bool operator==(const ParticipantAttributes& b) const
+        {
+            return (this->rtps == b.rtps);
+        }
 };
 
 }
 }
-
-
 
 #endif /* PARTICIPANTATTRIBUTES_H_ */

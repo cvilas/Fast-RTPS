@@ -51,12 +51,17 @@ class PubSubWriterReader
             ~ParticipantListener() {}
 
 #if HAVE_SECURITY
-            void onParticipantAuthentication(eprosima::fastrtps::Participant*, const eprosima::fastrtps::ParticipantAuthenticationInfo& info)
+            void onParticipantAuthentication(eprosima::fastrtps::Participant*,
+                eprosima::fastrtps::rtps::ParticipantAuthenticationInfo&& info) override
             {
-                if(info.rtps.status() == eprosima::fastrtps::rtps::AUTHORIZED_RTPSPARTICIPANT)
+                if(info.status == eprosima::fastrtps::rtps::ParticipantAuthenticationInfo::AUTHORIZED_PARTICIPANT)
+                {
                     wreader_.authorized();
-                else if(info.rtps.status() == eprosima::fastrtps::rtps::UNAUTHORIZED_RTPSPARTICIPANT)
+                }
+                else if(info.status == eprosima::fastrtps::rtps::ParticipantAuthenticationInfo::UNAUTHORIZED_PARTICIPANT)
+                {
                     wreader_.unauthorized();
+                }
             }
 #endif
 
@@ -164,13 +169,13 @@ class PubSubWriterReader
 
         // By default, heartbeat period and nack response delay are 100 milliseconds.
         publisher_attr_.times.heartbeatPeriod.seconds = 0;
-        publisher_attr_.times.heartbeatPeriod.fraction = 4294967 * 100;
+        publisher_attr_.times.heartbeatPeriod.nanosec = 100000000;
         publisher_attr_.times.nackResponseDelay.seconds = 0;
-        publisher_attr_.times.nackResponseDelay.fraction = 4294967 * 100;
+        publisher_attr_.times.nackResponseDelay.nanosec = 100000000;
 
         // By default, heartbeat period delay is 100 milliseconds.
         subscriber_attr_.times.heartbeatResponseDelay.seconds = 0;
-        subscriber_attr_.times.heartbeatResponseDelay.fraction = 4294967 * 100;
+        subscriber_attr_.times.heartbeatResponseDelay.nanosec = 100000000;
     }
 
     ~PubSubWriterReader()
@@ -278,7 +283,7 @@ class PubSubWriterReader
         cv_.wait(lock, checker);
     }
 
-    void waitDiscovery()
+    void wait_discovery()
     {
         std::unique_lock<std::mutex> lock(mutexDiscovery_);
 

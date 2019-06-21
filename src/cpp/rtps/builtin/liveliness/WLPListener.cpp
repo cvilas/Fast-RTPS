@@ -38,21 +38,20 @@ namespace fastrtps{
 namespace rtps {
 
 
-WLPListener::WLPListener(WLP* plwp):
-																		mp_WLP(plwp)
+WLPListener::WLPListener(WLP* plwp) : mp_WLP(plwp)
 {
-	free(aux_msg.buffer);
 }
 
 WLPListener::~WLPListener()
 {
-	aux_msg.buffer = nullptr;
 }
 
 
 typedef std::vector<WriterProxy*>::iterator WPIT;
 
-void WLPListener::onNewCacheChangeAdded(RTPSReader* reader,const CacheChange_t* const changeIN)
+void WLPListener::onNewCacheChangeAdded(
+        RTPSReader* reader,
+        const CacheChange_t* const changeIN)
 {
 	std::lock_guard<std::recursive_mutex> guard2(*mp_WLP->getBuiltinProtocols()->mp_PDP->getMutex());
 	logInfo(RTPS_LIVELINESS,"");
@@ -65,13 +64,13 @@ void WLPListener::onNewCacheChangeAdded(RTPSReader* reader,const CacheChange_t* 
 		return;
 	}
 	//Check the serializedPayload:
-	for(auto ch = this->mp_WLP->mp_builtinReaderHistory->changesBegin();
-			ch!=mp_WLP->mp_builtinReaderHistory->changesEnd();++ch)
+    auto history = reader->getHistory();
+	for(auto ch = history->changesBegin(); ch!=history->changesEnd();++ch)
 	{
 		if((*ch)->instanceHandle == change->instanceHandle &&
 				(*ch)->sequenceNumber < change->sequenceNumber)
 		{
-			mp_WLP->mp_builtinReaderHistory->remove_change(*ch);
+			history->remove_change(*ch);
 			break;
 		}
 	}
@@ -95,36 +94,13 @@ void WLPListener::onNewCacheChangeAdded(RTPSReader* reader,const CacheChange_t* 
 	if(guidP == reader->getGuid().guidPrefix)
 	{
 		logInfo(RTPS_LIVELINESS,"Message from own RTPSParticipant, ignoring");
-		this->mp_WLP->mp_builtinReaderHistory->remove_change(change);
+        history->remove_change(change);
 		return;
 	}
 	this->mp_WLP->getBuiltinProtocols()->mp_PDP->assertRemoteWritersLiveliness(guidP,livelinessKind);
 
 	return;
 }
-
-
-//bool WLPListener::processParameterList(ParameterList_t* param,GuidPrefix_t* guidP,LivelinessQosPolicyKind* liveliness)
-//{
-//	for(std::vector<Parameter_t*>::iterator it=param->m_parameters.begin();
-//			it!=param->m_parameters.end();++it)
-//	{
-//		switch((*it)->Pid)
-//		{
-//		case(PID_KEY_HASH):
-//						{
-//			ParameterKey_t* p = (ParameterKey_t*)(*it);
-//			return separateKey(p->key,guidP,liveliness);
-//						}
-//		default:
-//		{
-//			logWarning(RTPS_LIVELINESS,"In this ParameterList should not be anything but the Key");
-//			break;
-//		}
-//		}
-//	}
-//	return false;
-//}
 
 bool WLPListener::separateKey(InstanceHandle_t& key,GuidPrefix_t* guidP,LivelinessQosPolicyKind* liveliness)
 {
@@ -141,18 +117,9 @@ bool WLPListener::computeKey(CacheChange_t* change)
 	if(change->instanceHandle == c_InstanceHandle_Unknown)
 	{
 		SerializedPayload_t* pl = &change->serializedPayload;
-		if(pl->length > 16)
+		if(pl->length >= 16)
 		{
-			CDRMessage::initCDRMsg(&aux_msg);
-			aux_msg.buffer = pl->data;
-			aux_msg.length = pl->length;
-			aux_msg.max_size = pl->max_size;
-			aux_msg.msg_endian = pl->encapsulation == PL_CDR_BE ? BIGEND : LITTLEEND;
-			for(uint8_t i =0;i<16;++i)
-			{
-				change->instanceHandle.value[i] = aux_msg.buffer[i];
-			}
-			aux_msg.buffer = nullptr;
+			memcpy(change->instanceHandle.value, pl->data, 16);
 			return true;
 		}
 		return false;

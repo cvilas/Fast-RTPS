@@ -14,6 +14,9 @@
 
 #include <fastrtps/fastrtps_dll.h>
 
+#define VC_EXTRALEAN
+#define WIN32_LEAN_AND_MEAN
+
 // Microsoft Visual C++ generated resource script.
 //
 #ifdef APSTUDIO_INVOKED
@@ -83,7 +86,7 @@ END
 #define VER_PRODUCTNAME_STR "FastRTPS"
 
 #ifdef _WIN32
-#if defined(FASTRTPS_SOURCE) && defined(FASTRTPS_DYN_LINK)
+#if defined(fastrtps_EXPORTS)
 
 #ifndef _DEBUG
 #define VER_DEBUG 0

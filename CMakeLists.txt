@@ -92,12 +92,21 @@ set(${PROJECT_NAME}_DESCRIPTION "eProsima ${PROJECT_NAME_LARGE} library provides
 
 message(STATUS "Configuring ${PROJECT_NAME_LARGE}")
 message(STATUS "Version: ${PROJECT_VERSION}")
-message(STATUS "To change de version modify the file configure.ac")
+message(STATUS "To change the version modify the file configure.ac")
 
 ###############################################################################
 # Generation of windows installers.
 ###############################################################################
 option(EPROSIMA_INSTALLER "Activate the creation of a build to create windows installers" OFF)
+
+###############################################################################
+# eProsima build options
+###############################################################################
+option(EPROSIMA_BUILD "Activate internal building" OFF)
+
+if(EPROSIMA_INSTALLER)
+    set(EPROSIMA_BUILD ON)
+endif()
 
 ###############################################################################
 # Warning level
@@ -112,12 +121,20 @@ if(MSVC OR MSVC_IDE)
     if(EPROSIMA_EXTRA_CMAKE_CXX_FLAGS)
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${EPROSIMA_EXTRA_CMAKE_CXX_FLAGS}")
     endif()
+
+    if(EPROSIMA_BUILD)
+        string(REPLACE "/DNDEBUG" "" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
+    endif()
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -pedantic -Wextra -Wno-unknown-pragmas")
     if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,--no-undefined")
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
         set(CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS} -Wl,-undefined,error")
+    endif()
+
+    if(EPROSIMA_BUILD)
+        string(REPLACE "-DNDEBUG" "" CMAKE_CXX_FLAGS_RELWITHDEBINFO "${CMAKE_CXX_FLAGS_RELWITHDEBINFO}")
     endif()
 endif()
 
@@ -134,6 +151,7 @@ endif()
 # Test system configuration
 ###############################################################################
 include(${PROJECT_SOURCE_DIR}/cmake/common/check_configuration.cmake)
+set(FORCE_CXX "11")
 check_stdcxx()
 check_compile_feature()
 check_endianness()
@@ -165,16 +183,6 @@ else()
 endif()
 
 ###############################################################################
-# eProsima build options
-###############################################################################
-option(EPROSIMA_BUILD "Activate internal building" OFF)
-
-if(EPROSIMA_INSTALLER)
-    set(EPROSIMA_BUILD ON)
-endif()
-
-
-###############################################################################
 # Internal debug messages
 ###############################################################################
 
@@ -187,7 +195,6 @@ endif()
 # Load CMake modules
 ###############################################################################
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake/modules)
-
 
 ###############################################################################
 # Default shared libraries
@@ -217,12 +224,28 @@ option(SECURITY "Activate security" OFF)
 
 if(SECURITY)
     find_package(OpenSSL REQUIRED)
+else()
+    find_package(OpenSSL)
+endif()
+
+option(NO_TLS "Disables TLS Support" OFF)
+if(OpenSSL_FOUND AND NOT NO_TLS)
+    set(TLS_FOUND 1)
+else()
+    set(TLS_FOUND 0)
+endif()
+
+if(SECURITY OR TLS_FOUND)
+    set(LINK_SSL 1)
+else()
+    set(LINK_SSL 0)
 endif()
 
 ###############################################################################
 # Java application
 ###############################################################################
 option(BUILD_JAVA "Activate the compilation of the Java application" OFF)
+option(TEST_JAVA "Perform testing when compile the Java application" OFF)
 
 if(EPROSIMA_INSTALLER)
     set(BUILD_JAVA ON)
@@ -231,7 +254,13 @@ endif()
 if(BUILD_JAVA)
     include(${PROJECT_SOURCE_DIR}/cmake/dev/java_support.cmake)
 
-    gradle_build(${PROJECT_SOURCE_DIR}/${PROJECT_NAME}gen
+    if(TEST_JAVA)
+        set(CMD_JAVA "build")
+    else()
+        set(CMD_JAVA "assemble")
+    endif()
+
+    gradle_build(${PROJECT_SOURCE_DIR}/${PROJECT_NAME}gen ${CMD_JAVA}
         THIRDPARTY_DEPENDENCY idl
         THIRDPARTY_DEPENDENCY fastcdr
         )
@@ -245,27 +274,9 @@ add_subdirectory(src/cpp)
 ###############################################################################
 # Testing options
 ###############################################################################
-option(PERFORMANCE_TESTS "Activate the building and execution of performance tests" OFF)
-option(EPROSIMA_BUILD_TESTS "Activate the building and execution unit tests and integral tests" OFF)
-
-if(EPROSIMA_BUILD AND NOT EPROSIMA_INSTALLER AND NOT EPROSIMA_INSTALLER_MINION)
-    set(EPROSIMA_BUILD_TESTS ON)
-endif()
-
-###############################################################################
-# Testing
-###############################################################################
-if(EPROSIMA_BUILD_TESTS AND IS_TOP_LEVEL AND NOT EPROSIMA_INSTALLER)
-    file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}/valgrind.supp" MEMORYCHECK_SUPPRESSIONS_FILE)
-    enable_testing()
-    include(CTest)
-    add_subdirectory(test)
-endif()
-
-###############################################################################
-# Performance tests
-###############################################################################
-add_subdirectory(test/performance)
+enable_testing()
+include(CTest)
+add_subdirectory(test)
 
 ###############################################################################
 # Examples
@@ -277,7 +288,7 @@ if(EPROSIMA_BUILD AND IS_TOP_LEVEL AND NOT EPROSIMA_INSTALLER AND NOT EPROSIMA_I
 endif()
 
 if(COMPILE_EXAMPLES)
-	add_subdirectory(examples)
+    add_subdirectory(examples)
 endif()
 
 ###############################################################################
@@ -379,7 +390,10 @@ set(CPACK_COMPONENT_LICENSES_HIDDEN 1)
 
 set(CPACK_COMPONENTS_ALL headers licenses)
 
-option(INSTALL_EXAMPLES "Install example" ON)
+option(INSTALL_EXAMPLES "Install example" OFF)
+if(EPROSIMA_INSTALLER)
+    set(INSTALL_EXAMPLES ON)
+endif()
 
 if(INSTALL_EXAMPLES)
   # Install examples
@@ -450,10 +464,10 @@ endif()
 if(MSVC OR MSVC_IDE)
     if(EPROSIMA_INSTALLER)
         set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL}
-            libraries_i86Win32VS2013
-            libraries_x64Win64VS2013
             libraries_i86Win32VS2015
             libraries_x64Win64VS2015
+            libraries_i86Win32VS2017
+            libraries_x64Win64VS2017
             )
     else()
         set(CPACK_COMPONENTS_ALL ${CPACK_COMPONENTS_ALL} libraries_${MSVC_ARCH})

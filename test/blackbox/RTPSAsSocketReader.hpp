@@ -30,6 +30,7 @@
 #include <fastrtps/rtps/reader/ReaderListener.h>
 #include <fastrtps/rtps/attributes/ReaderAttributes.h>
 #include <fastrtps/rtps/common/SequenceNumber.h>
+#include <fastrtps/utils/IPLocator.h>
 
 #include <fastcdr/FastBuffer.h>
 #include <fastcdr/Cdr.h>
@@ -47,6 +48,8 @@
 #else
 #define GET_PID getpid
 #endif
+
+using eprosima::fastrtps::rtps::IPLocator;
 
 template<class TypeSupport>
 class RTPSAsSocketReader
@@ -100,7 +103,7 @@ class RTPSAsSocketReader
 
             // By default, heartbeat period delay is 100 milliseconds.
             reader_attr_.times.heartbeatResponseDelay.seconds = 0;
-            reader_attr_.times.heartbeatResponseDelay.fraction = 4294967 * 100;
+            reader_attr_.times.heartbeatResponseDelay.nanosec = 100000000;
         }
 
         virtual ~RTPSAsSocketReader()
@@ -176,7 +179,7 @@ class RTPSAsSocketReader
             receiving_ = true;
             mutex_.unlock();
 
-            std::unique_lock<std::recursive_mutex> lock(*history_->getMutex());
+            std::unique_lock<std::recursive_timed_mutex> lock(*history_->getMutex());
             while(history_->changesBegin() != history_->changesEnd())
             {
                 eprosima::fastrtps::rtps::CacheChange_t* change = *history_->changesBegin();
@@ -233,8 +236,8 @@ class RTPSAsSocketReader
             port_ = port;
 
             eprosima::fastrtps::rtps::Locator_t loc;
-            loc.set_IP4_address(ip);
-            loc.port = port;
+            IPLocator::setIPv4(loc, ip);
+            loc.port = static_cast<uint16_t>(port);
             reader_attr_.endpoint.multicastLocatorList.push_back(loc);
 
             return *this;
@@ -252,8 +255,8 @@ class RTPSAsSocketReader
 
                 eprosima::fastrtps::rtps::RemoteWriterAttributes wattr;
                 eprosima::fastrtps::rtps::Locator_t loc;
-                loc.set_IP4_address(ip_);
-                loc.port = port_;
+                IPLocator::setIPv4(loc, ip_);
+                loc.port = static_cast<uint16_t>(port_);
                 wattr.endpoint.multicastLocatorList.push_back(loc);
                 wattr.endpoint.reliabilityKind = eprosima::fastrtps::rtps::RELIABLE;
                 wattr.guid.guidPrefix.value[0] = guid.guidPrefix.value[0];

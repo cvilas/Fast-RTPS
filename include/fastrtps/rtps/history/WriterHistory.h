@@ -27,6 +27,7 @@ namespace fastrtps{
 namespace rtps {
 
 class RTPSWriter;
+class WriteParams;
 
 /**
  * Class WriterHistory, container of the different CacheChanges of a writer
@@ -49,12 +50,24 @@ class WriterHistory : public History
      * Update the maximum and minimum sequenceNumber cacheChanges.
      */
     RTPS_DllAPI void updateMaxMinSeqNum();
+
     /**
-     * Add a CacheChange_t to the ReaderHistory.
-     * @param a_change Pointer to the CacheChange to add.
+     * Add a CacheChange_t to the WriterHistory.
+     * @param a_change Pointer to the CacheChange_t to be added.
      * @return True if added.
      */
     RTPS_DllAPI bool add_change(CacheChange_t* a_change);
+
+    /**
+     * Add a CacheChange_t to the WriterHistory.
+     * @param a_change Pointer to the CacheChange_t to be added.
+     * @param wparams Extra write parameters.
+     * @return True if added.
+     */
+    RTPS_DllAPI bool add_change(
+            CacheChange_t* a_change,
+            WriteParams &wparams);
+
     /**
      * Remove a specific change from the history.
      * @param a_change Pointer to the CacheChange_t.
@@ -77,6 +90,11 @@ class WriterHistory : public History
     RTPS_DllAPI SequenceNumber_t next_sequence_number() const { return m_lastCacheChangeSeqNum + 1; }
 
     protected:
+
+    bool add_change_(CacheChange_t* a_change, WriteParams &wparams,
+            std::chrono::time_point<std::chrono::steady_clock> max_blocking_time
+                = std::chrono::steady_clock::now() + std::chrono::hours(24));
+
     //!Last CacheChange Sequence Number added to the History.
     SequenceNumber_t m_lastCacheChangeSeqNum;
     //!Pointer to the associated RTPSWriter;

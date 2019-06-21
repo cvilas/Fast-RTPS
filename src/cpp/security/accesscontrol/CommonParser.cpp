@@ -74,46 +74,52 @@ bool eprosima::fastrtps::rtps::security::parse_domain_id_set(tinyxml2::XMLElemen
                     {
                         if(tinyxml2::XMLError::XML_SUCCESS != subnode->QueryUnsignedText(&min_domain_id))
                         {
-                            logError(XMLPARSER, "Invalid value of " << DomainId_str <<
+                            logError(XMLPARSER, "Invalid min value of " << DomainId_str <<
                                     " tag. Line " << PRINTLINE(subnode));
                             returned_value = false;
                         }
-                    }
-                    else
-                    {
-                        logError(XMLPARSER, "Expected " << Min_str << " tag. Line " <<
-                                PRINTLINE(subnode));
-                        returned_value = false;
-                    }
-
-                    if(returned_value && (subnode = subnode->NextSiblingElement()) != nullptr)
-                    {
-                        if(strcmp(subnode->Name(), Max_str) == 0)
+                        else
                         {
                             uint32_t max_domain_id = 0;
 
-                            if(tinyxml2::XMLError::XML_SUCCESS == subnode->QueryUnsignedText(&max_domain_id))
+                            // "Max" parameter is optional
+                            if ((subnode = subnode->NextSiblingElement()) != nullptr)
+                            {
+                                if (strcmp(subnode->Name(), Max_str) == 0)
+                                {
+                                    if (tinyxml2::XMLError::XML_SUCCESS != subnode->QueryUnsignedText(&max_domain_id))
+                                    {
+                                        logError(XMLPARSER, "Invalid max value of " << DomainId_str <<
+                                            " tag. Line " << PRINTLINE(subnode));
+                                        returned_value = false;
+                                    }
+                                }
+                            }
+
+                            if(returned_value)
                             {
                                 domains.ranges.push_back(std::make_pair(min_domain_id, max_domain_id));
                             }
-                            else
-                            {
-                                logError(XMLPARSER, "Invalid value of " << DomainId_str <<
-                                        " tag. Line " << PRINTLINE(subnode));
-                                returned_value = false;
-                            }
+                        }
+                    }
+                    else if (strcmp(subnode->Name(), Max_str) == 0)
+                    {
+                        uint32_t max_domain_id = 0;
+                        if (tinyxml2::XMLError::XML_SUCCESS == subnode->QueryUnsignedText(&max_domain_id))
+                        {
+                            domains.ranges.push_back(std::make_pair(min_domain_id, max_domain_id));
                         }
                         else
                         {
-                            logError(XMLPARSER, "Expected " << Max_str << " tag. Line " <<
-                                    PRINTLINE(subnode));
+                            logError(XMLPARSER, "Invalid max value of " << DomainId_str <<
+                                " tag. Line " << PRINTLINE(subnode));
                             returned_value = false;
                         }
                     }
                     else
                     {
-                        logError(XMLPARSER, "Expected " << Max_str << " tag. Line " <<
-                                PRINTLINE(node));
+                        logError(XMLPARSER, "Expected " << Min_str << " or " << Max_str << " tag. Line " <<
+                                PRINTLINE(subnode));
                         returned_value = false;
                     }
                 }

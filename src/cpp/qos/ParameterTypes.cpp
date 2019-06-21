@@ -138,6 +138,15 @@ bool ParameterBool_t::addToCDRMessage(CDRMessage_t* msg){
     return valid;
 }
 
+bool ParameterStatusInfo_t::addToCDRMessage(CDRMessage_t* msg)
+{
+    bool valid = CDRMessage::addUInt16(msg, this->Pid);
+    valid &= CDRMessage::addUInt16(msg, PARAMETER_STATUS_INFO_LENGTH);//this->length);
+    valid &= CDRMessage::addUInt16(msg, 0);
+    valid &= CDRMessage::addOctet(msg, 0);
+    valid &= CDRMessage::addOctet(msg, status);
+    return valid;
+}
 
 bool ParameterCount_t::addToCDRMessage(CDRMessage_t* msg){
     bool valid = CDRMessage::addUInt16(msg, this->Pid);
@@ -159,8 +168,8 @@ bool ParameterTime_t::addToCDRMessage(CDRMessage_t* msg)
 {
     bool valid = CDRMessage::addUInt16(msg, this->Pid);
     valid &= CDRMessage::addUInt16(msg, PARAMETER_TIME_LENGTH);//this->length);
-    valid &= CDRMessage::addInt32(msg,time.seconds);
-    valid &= CDRMessage::addInt32(msg,time.fraction);
+    valid &= CDRMessage::addInt32(msg, time.seconds());
+    valid &= CDRMessage::addInt32(msg, time.fraction());
     return valid;
 }
 
@@ -209,6 +218,8 @@ bool ParameterSampleIdentity_t::addToCDRMessage(CDRMessage_t*msg)
     return valid;
 }
 
+#if HAVE_SECURITY
+
 bool ParameterToken_t::addToCDRMessage(CDRMessage_t*msg)
 {
     bool valid = CDRMessage::addUInt16(msg, this->Pid);
@@ -228,3 +239,23 @@ bool ParameterToken_t::addToCDRMessage(CDRMessage_t*msg)
     msg->length -= 2;
     return valid;
 }
+
+bool ParameterParticipantSecurityInfo_t::addToCDRMessage(CDRMessage_t*msg)
+{
+    bool valid = CDRMessage::addUInt16(msg, this->Pid);
+    valid &= CDRMessage::addUInt16(msg, PARAMETER_PARTICIPANT_SECURITY_INFO_LENGTH);//this->length);
+    valid &= CDRMessage::addUInt32(msg, this->security_attributes);
+    valid &= CDRMessage::addUInt32(msg, this->plugin_security_attributes);
+    return valid;
+}
+
+bool ParameterEndpointSecurityInfo_t::addToCDRMessage(CDRMessage_t*msg)
+{
+    bool valid = CDRMessage::addUInt16(msg, this->Pid);
+    valid &= CDRMessage::addUInt16(msg, PARAMETER_ENDPOINT_SECURITY_INFO_LENGTH);//this->length);
+    valid &= CDRMessage::addUInt32(msg, this->security_attributes);
+    valid &= CDRMessage::addUInt32(msg, this->plugin_security_attributes);
+    return valid;
+}
+
+#endif

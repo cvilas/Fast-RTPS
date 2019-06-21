@@ -14,7 +14,7 @@
 
 macro(add_blackbox_gtest test memorymode)
     # Parse arguments
-    set(multiValueArgs SOURCES ENVIRONMENTS)
+    set(multiValueArgs SOURCES ENVIRONMENTS LABELS)
     cmake_parse_arguments(GTEST "" "" "${multiValueArgs}" ${ARGN})
 
     if(GTEST_INDIVIDUAL)
@@ -49,6 +49,10 @@ macro(add_blackbox_gtest test memorymode)
                 foreach(property ${GTEST_ENVIRONMENTS})
                     set_property(TEST ${GTEST_GROUP_NAME}_${memorymode}.${GTEST_NAME} APPEND PROPERTY ENVIRONMENT "${property}")
                 endforeach()
+
+                # Add labels
+                set_property(TEST ${GTEST_GROUP_NAME}_${memorymode}.${GTEST_NAME} PROPERTY LABELS "${GTEST_LABELS}")
+
             endforeach()
         endforeach()
     else()
@@ -72,6 +76,10 @@ macro(add_blackbox_gtest test memorymode)
         foreach(property ${GTEST_ENVIRONMENTS})
             set_property(TEST ${test} APPEND PROPERTY ENVIRONMENT "${property}")
         endforeach()
+
+        # Add labels
+        set_property(TEST ${test} PROPERTY LABELS "${GTEST_LABELS}")
+
     endif()
 endmacro()
 
@@ -97,17 +105,29 @@ if(NOT ((MSVC OR MSVC_IDE) AND EPROSIMA_INSTALLER) AND fastcdr_FOUND)
         ###############################################################################
         # Unit tests
         ###############################################################################
-        set(BLACKBOXTESTS_SOURCE BlackboxTests.cpp
+        file(GLOB BLACKBOXTESTS_TEST_SOURCE "BlackboxTests*.cpp")
+        set(BLACKBOXTESTS_SOURCE ${BLACKBOXTESTS_TEST_SOURCE}
             types/HelloWorld.cpp
             types/HelloWorldType.cpp
+            types/KeyedHelloWorld.cpp
+            types/KeyedHelloWorldType.cpp
             types/String.cpp
             types/StringType.cpp
             types/Data64kb.cpp
             types/Data64kbType.cpp
             types/Data1mb.cpp
             types/Data1mbType.cpp
+            types/FixedSized.cpp
+            types/FixedSizedType.cpp
+
+            utils/data_generators.cpp
+            utils/lambda_functions.cpp
+            utils/print_functions.cpp
+
             ReqRepHelloWorldRequester.cpp
             ReqRepHelloWorldReplier.cpp
+            TCPReqRepHelloWorldRequester.cpp
+            TCPReqRepHelloWorldReplier.cpp
             )
 
         # Prepare static discovery xml file for blackbox tests.
@@ -130,7 +150,7 @@ if(NOT ((MSVC OR MSVC_IDE) AND EPROSIMA_INSTALLER) AND fastcdr_FOUND)
             PREALLOCATED_MEMORY_MODE_TEST)
         target_include_directories(BlackboxTests_PreallocMem PRIVATE ${GTEST_INCLUDE_DIRS})
         target_link_libraries(BlackboxTests_PreallocMem fastrtps fastcdr ${GTEST_LIBRARIES})
-        add_blackbox_gtest(BlackboxTests_PreallocMem PreallocMem SOURCES ${BLACKBOXTESTS_SOURCE}
+        add_blackbox_gtest(BlackboxTests_PreallocMem PreallocMem SOURCES ${BLACKBOXTESTS_TEST_SOURCE}
             ENVIRONMENTS "CERTS_PATH=${PROJECT_SOURCE_DIR}/test/certs"
             "TOPIC_RANDOM_NUMBER=${TOPIC_RANDOM_NUMBER}"
             "W_UNICAST_PORT_RANDOM_NUMBER=${W_UNICAST_PORT_RANDOM_NUMBER}"
@@ -143,12 +163,13 @@ if(NOT ((MSVC OR MSVC_IDE) AND EPROSIMA_INSTALLER) AND fastcdr_FOUND)
             PREALLOCATED_WITH_REALLOC_MEMORY_MODE_TEST)
         target_include_directories(BlackboxTests_ReallocMem PRIVATE ${GTEST_INCLUDE_DIRS})
         target_link_libraries(BlackboxTests_ReallocMem fastrtps fastcdr ${GTEST_LIBRARIES})
-        add_blackbox_gtest(BlackboxTests_ReallocMem ReallocMem SOURCES ${BLACKBOXTESTS_SOURCE}
+        add_blackbox_gtest(BlackboxTests_ReallocMem ReallocMem SOURCES ${BLACKBOXTESTS_TEST_SOURCE}
             ENVIRONMENTS "CERTS_PATH=${PROJECT_SOURCE_DIR}/test/certs"
             "TOPIC_RANDOM_NUMBER=${TOPIC_RANDOM_NUMBER}"
             "W_UNICAST_PORT_RANDOM_NUMBER=${W_UNICAST_PORT_RANDOM_NUMBER}"
             "R_UNICAST_PORT_RANDOM_NUMBER=${R_UNICAST_PORT_RANDOM_NUMBER}"
             "MULTICAST_PORT_RANDOM_NUMBER=${MULTICAST_PORT_RANDOM_NUMBER}"
+            LABELS "NoMemoryCheck"
             )
 
         add_executable(BlackboxTests_DynMem ${BLACKBOXTESTS_SOURCE})
@@ -156,12 +177,13 @@ if(NOT ((MSVC OR MSVC_IDE) AND EPROSIMA_INSTALLER) AND fastcdr_FOUND)
             DYNAMIC_RESERVE_MEMORY_MODE_TEST)
         target_include_directories(BlackboxTests_DynMem PRIVATE ${GTEST_INCLUDE_DIRS})
         target_link_libraries(BlackboxTests_DynMem fastrtps fastcdr ${GTEST_LIBRARIES})
-        add_blackbox_gtest(BlackboxTests_DynMem DynMem SOURCES ${BLACKBOXTESTS_SOURCE}
+        add_blackbox_gtest(BlackboxTests_DynMem DynMem SOURCES ${BLACKBOXTESTS_TEST_SOURCE}
             ENVIRONMENTS "CERTS_PATH=${PROJECT_SOURCE_DIR}/test/certs"
             "TOPIC_RANDOM_NUMBER=${TOPIC_RANDOM_NUMBER}"
             "W_UNICAST_PORT_RANDOM_NUMBER=${W_UNICAST_PORT_RANDOM_NUMBER}"
             "R_UNICAST_PORT_RANDOM_NUMBER=${R_UNICAST_PORT_RANDOM_NUMBER}"
             "MULTICAST_PORT_RANDOM_NUMBER=${MULTICAST_PORT_RANDOM_NUMBER}"
+            LABELS "NoMemoryCheck"
             )
     endif()
 endif()

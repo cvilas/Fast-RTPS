@@ -29,19 +29,22 @@ namespace fastrtps{
 namespace rtps{
 
 // //!@brief Enumeration of the different Submessages types
-#define PAD 0x01
-#define ACKNACK 0x06
-#define HEARTBEAT 0x07
-#define GAP 0x08
-#define INFO_TS 0x09
-#define INFO_SRC 0x0c
-#define INFO_REPLY_IP4 0x0d
-#define INFO_DST 0x0e
-#define INFO_REPLY 0x0f
-#define NACK_FRAG 0x12
-#define HEARTBEAT_FRAG 0x13
-#define DATA 0x15
-#define DATA_FRAG 0x16
+enum SubmessageId : uint8_t
+{
+    PAD             = 0x01,
+    ACKNACK         = 0x06,
+    HEARTBEAT       = 0x07,
+    GAP             = 0x08,
+    INFO_TS         = 0x09,
+    INFO_SRC        = 0x0c,
+    INFO_REPLY_IP4  = 0x0d,
+    INFO_DST        = 0x0e,
+    INFO_REPLY      = 0x0f,
+    NACK_FRAG       = 0x12,
+    HEARTBEAT_FRAG  = 0x13,
+    DATA            = 0x15,
+    DATA_FRAG       = 0x16
+};
 
 //!@brief Structure Header_t, RTPS Message Header Structure.
 //!@ingroup COMMON_MODULE
@@ -54,8 +57,8 @@ namespace rtps{
      GuidPrefix_t guidPrefix;
      Header_t():
          version(c_ProtocolVersion)
+         , vendorId(c_VendorId_eProsima)
      {
-         set_VendorId_eProsima(vendorId);
      }
      ~Header_t(){
      }
@@ -74,17 +77,18 @@ namespace rtps{
  }
 
  //!@brief Structure SubmessageHeader_t, used to contain the header information of a submessage.
- struct SubmessageHeader_t{
+ struct SubmessageHeader_t
+ {
      octet submessageId;
-     uint16_t submessageLength;
-     uint32_t submsgLengthLarger;
+     uint32_t submessageLength;
      SubmessageFlag flags;
+     bool is_last;
 
-     SubmessageHeader_t():
-         submessageId(0),
-         submessageLength(0),
-         submsgLengthLarger(0),
-         flags(0)
+     SubmessageHeader_t()
+         : submessageId(0)
+         , submessageLength(0)
+         , flags(0)
+         , is_last(false)
      {}
  };
 

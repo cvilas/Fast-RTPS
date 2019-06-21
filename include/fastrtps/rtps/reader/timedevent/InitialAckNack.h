@@ -41,12 +41,16 @@ class WriterProxy;
 class InitialAckNack: public TimedEvent
 {
     public:
+
         /**
          *
-         * @param p_RP
+         * @param wp
          * @param interval
          */
-        InitialAckNack(WriterProxy* wp, double interval);
+        InitialAckNack(
+                WriterProxy* wp,
+                double interval);
+
         virtual ~InitialAckNack();
 
         /**
@@ -55,12 +59,18 @@ class InitialAckNack: public TimedEvent
          * @param code Code representing the status of the event
          * @param msg Message associated to the event
          */
-        void event(EventCode code, const char* msg= nullptr);
+        void event(
+                EventCode code,
+                const char* msg= nullptr);
 
         //!
         RTPSMessageGroup_t m_cdrmessages;
         //!
         WriterProxy* wp_;
+        //!List of destination locators
+        LocatorList_t m_destination_locators;
+        //!List of destination endpoints
+        std::vector<GUID_t> m_remote_endpoints;
 };
 
 }

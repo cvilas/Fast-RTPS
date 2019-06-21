@@ -15,6 +15,7 @@
 #include <fastrtps/xmlparser/XMLParser.h>
 #include <fastrtps/xmlparser/XMLTree.h>
 #include <fastrtps/log/Log.h>
+#include <fastrtps/utils/IPLocator.h>
 
 #include <gtest/gtest.h>
 
@@ -49,7 +50,7 @@ TEST_F(XMLTreeTests, OnlyRoot)
     ASSERT_EQ(false, test_base.removeChild(0));
     ASSERT_EQ(nullptr, test_base.getChild(0));
     ASSERT_EQ(nullptr, test_base.getParent());
-    ASSERT_EQ(0, test_base.getNumChildren());
+    ASSERT_EQ(0u, test_base.getNumChildren());
 }
 
 TEST_F(XMLTreeTests, RootChildren)
@@ -58,44 +59,44 @@ TEST_F(XMLTreeTests, RootChildren)
 
     ASSERT_EQ(false, test_base.removeChild(0));
     ASSERT_EQ(nullptr, test_base.getChild(0));
-    ASSERT_EQ(0, test_base.getNumChildren());
+    ASSERT_EQ(0u, test_base.getNumChildren());
 
     BaseNode* child = new BaseNode{NodeType::APPLICATION};
     test_base.addChild(std::unique_ptr<BaseNode>(child));
 
-    ASSERT_EQ(1, test_base.getNumChildren());
+    ASSERT_EQ(1u, test_base.getNumChildren());
     ASSERT_EQ(child, test_base.getChild(0));
     ASSERT_EQ(&test_base, test_base.getChild(0)->getParent());
     ASSERT_EQ(NodeType::APPLICATION, test_base.getChild(0)->getType());
     ASSERT_EQ(true, test_base.removeChild(0));
-    ASSERT_EQ(0, test_base.getNumChildren());
+    ASSERT_EQ(0u, test_base.getNumChildren());
     ASSERT_EQ(false, test_base.removeChild(0));
 }
 
 TEST_F(XMLTreeTests, RootMultipleChildren)
 {
-    const int num_children = 10;
+    const unsigned int num_children = 10;
     BaseNode test_base{NodeType::ROOT};
 
     ASSERT_EQ(false, test_base.removeChild(0));
     ASSERT_EQ(nullptr, test_base.getChild(0));
-    ASSERT_EQ(0, test_base.getNumChildren());
+    ASSERT_EQ(0u, test_base.getNumChildren());
 
     std::vector<BaseNode*> children_backup;
-    for (int i = 0; i < num_children; ++i)
+    for (unsigned int i = 0; i < num_children; ++i)
     {
         children_backup.push_back(new BaseNode{NodeType::APPLICATION});
         test_base.addChild(std::unique_ptr<BaseNode>(children_backup[i]));
     }
 
-    for (int i = 0; i < num_children; ++i)
+    for (unsigned int i = 0; i < num_children; ++i)
     {
         ASSERT_EQ(children_backup[i], test_base.getChild(i));
         ASSERT_EQ(&test_base, test_base.getChild(i)->getParent());
         ASSERT_EQ(NodeType::APPLICATION, test_base.getChild(i)->getType());
     }
 
-    for (int i = 0; i < num_children; ++i)
+    for (unsigned int i = 0; i < num_children; ++i)
     {
         ASSERT_EQ(num_children - i, test_base.getNumChildren());
         ASSERT_EQ(true, test_base.removeChild(0));
@@ -372,45 +373,46 @@ TEST_F(XMLParserTests, Data)
     Locator_t locator;
     LocatorListIterator loc_list_it;
     PortParameters& port = rtps_atts.port;
-    locator.set_IP4_address(192, 168, 1, 2);
+    IPLocator::setIPv4(locator, 192, 168, 1, 2);
     locator.port = 2019;
     EXPECT_EQ(*rtps_atts.defaultUnicastLocatorList.begin(), locator);
-    locator.set_IP4_address(239, 255, 0, 1);
+    IPLocator::setIPv4(locator, 239, 255, 0, 1);
     locator.port = 2021;
     EXPECT_EQ(*rtps_atts.defaultMulticastLocatorList.begin(), locator);
-    locator.set_IP4_address(192, 168, 1, 1);
+    IPLocator::setIPv4(locator, 192, 168, 1, 1);
     locator.port = 1979;
-    EXPECT_EQ(*rtps_atts.defaultOutLocatorList.begin(), locator);
-    EXPECT_EQ(rtps_atts.defaultSendPort, 80);
-    EXPECT_EQ(rtps_atts.sendSocketBufferSize, 32);
-    EXPECT_EQ(rtps_atts.listenSocketBufferSize, 1000);
+    EXPECT_EQ(rtps_atts.sendSocketBufferSize, 32u);
+    EXPECT_EQ(rtps_atts.listenSocketBufferSize, 1000u);
     EXPECT_EQ(builtin.use_SIMPLE_RTPSParticipantDiscoveryProtocol, true);
     EXPECT_EQ(builtin.use_WriterLivelinessProtocol, false);
     EXPECT_EQ(builtin.use_SIMPLE_EndpointDiscoveryProtocol, true);
     EXPECT_EQ(builtin.use_STATIC_EndpointDiscoveryProtocol, false);
-    EXPECT_EQ(builtin.domainId, 2019102);
+    EXPECT_EQ(builtin.domainId, 2019102u);
     EXPECT_EQ(builtin.leaseDuration, c_TimeInfinite);
     EXPECT_EQ(builtin.leaseDuration_announcementperiod.seconds, 10);
-    EXPECT_EQ(builtin.leaseDuration_announcementperiod.fraction, 333);
+    EXPECT_EQ(builtin.leaseDuration_announcementperiod.nanosec, 333u);
     EXPECT_EQ(builtin.m_simpleEDP.use_PublicationWriterANDSubscriptionReader, false);
     EXPECT_EQ(builtin.m_simpleEDP.use_PublicationReaderANDSubscriptionWriter, true);
-    locator.set_IP4_address(192, 168, 1, 5);
+    IPLocator::setIPv4(locator, 192, 168, 1, 5);
     locator.port = 9999;
     EXPECT_EQ(*(loc_list_it = builtin.metatrafficUnicastLocatorList.begin()), locator);
-    locator.set_IP4_address(192, 168, 1, 6);
+    IPLocator::setIPv4(locator, 192, 168, 1, 6);
     locator.port = 6666;
     ++loc_list_it;
     EXPECT_EQ(*loc_list_it, locator);
-    locator.set_IP4_address(239, 255, 0, 2);
+    IPLocator::setIPv4(locator, 239, 255, 0, 2);
     locator.port = 32;
     EXPECT_EQ(*(loc_list_it = builtin.metatrafficMulticastLocatorList.begin()), locator);
-    locator.set_IP4_address(239, 255, 0, 3);
+    IPLocator::setIPv4(locator, 239, 255, 0, 3);
     locator.port = 2112;
     ++loc_list_it;
     EXPECT_EQ(*loc_list_it, locator);
-    locator.set_IP4_address(239, 255, 0, 1);
+    IPLocator::setIPv4(locator, 239, 255, 0, 1);
     locator.port = 21120;
     EXPECT_EQ(*(loc_list_it = builtin.initialPeersList.begin()), locator);
+    EXPECT_EQ(builtin.readerHistoryMemoryPolicy, PREALLOCATED_MEMORY_MODE);
+    EXPECT_EQ(builtin.writerHistoryMemoryPolicy, PREALLOCATED_MEMORY_MODE);
+    EXPECT_EQ(builtin.mutation_tries, 55u);
     EXPECT_EQ(port.portBase, 12);
     EXPECT_EQ(port.domainIDGain, 34);
     EXPECT_EQ(port.participantIDGain, 56);
@@ -419,10 +421,8 @@ TEST_F(XMLParserTests, Data)
     EXPECT_EQ(port.offsetd2, 123);
     EXPECT_EQ(port.offsetd3, 456);
     EXPECT_EQ(rtps_atts.participantID, 9898);
-    EXPECT_EQ(rtps_atts.use_IP4_to_send, true);
-    EXPECT_EQ(rtps_atts.use_IP6_to_send, false);
-    EXPECT_EQ(rtps_atts.throughputController.bytesPerPeriod, 2048);
-    EXPECT_EQ(rtps_atts.throughputController.periodMillisecs, 45);
+    EXPECT_EQ(rtps_atts.throughputController.bytesPerPeriod, 2048u);
+    EXPECT_EQ(rtps_atts.throughputController.periodMillisecs, 45u);
     EXPECT_EQ(rtps_atts.useBuiltinTransports, true);
     EXPECT_EQ(std::string(rtps_atts.getName()), "test_name");
 }
@@ -460,45 +460,46 @@ TEST_F(XMLParserTests, DataBuffer)
     Locator_t locator;
     LocatorListIterator loc_list_it;
     PortParameters& port = rtps_atts.port;
-    locator.set_IP4_address(192, 168, 1, 2);
+    IPLocator::setIPv4(locator, 192, 168, 1, 2);
     locator.port = 2019;
     EXPECT_EQ(*rtps_atts.defaultUnicastLocatorList.begin(), locator);
-    locator.set_IP4_address(239, 255, 0, 1);
+    IPLocator::setIPv4(locator, 239, 255, 0, 1);
     locator.port = 2021;
     EXPECT_EQ(*rtps_atts.defaultMulticastLocatorList.begin(), locator);
-    locator.set_IP4_address(192, 168, 1, 1);
+    IPLocator::setIPv4(locator, 192, 168, 1, 1);
     locator.port = 1979;
-    EXPECT_EQ(*rtps_atts.defaultOutLocatorList.begin(), locator);
-    EXPECT_EQ(rtps_atts.defaultSendPort, 80);
-    EXPECT_EQ(rtps_atts.sendSocketBufferSize, 32);
-    EXPECT_EQ(rtps_atts.listenSocketBufferSize, 1000);
+    EXPECT_EQ(rtps_atts.sendSocketBufferSize, 32u);
+    EXPECT_EQ(rtps_atts.listenSocketBufferSize, 1000u);
     EXPECT_EQ(builtin.use_SIMPLE_RTPSParticipantDiscoveryProtocol, true);
     EXPECT_EQ(builtin.use_WriterLivelinessProtocol, false);
     EXPECT_EQ(builtin.use_SIMPLE_EndpointDiscoveryProtocol, true);
     EXPECT_EQ(builtin.use_STATIC_EndpointDiscoveryProtocol, false);
-    EXPECT_EQ(builtin.domainId, 2019102);
+    EXPECT_EQ(builtin.domainId, 2019102u);
     EXPECT_EQ(builtin.leaseDuration, c_TimeInfinite);
     EXPECT_EQ(builtin.leaseDuration_announcementperiod.seconds, 10);
-    EXPECT_EQ(builtin.leaseDuration_announcementperiod.fraction, 333);
+    EXPECT_EQ(builtin.leaseDuration_announcementperiod.nanosec, 333u);
     EXPECT_EQ(builtin.m_simpleEDP.use_PublicationWriterANDSubscriptionReader, false);
     EXPECT_EQ(builtin.m_simpleEDP.use_PublicationReaderANDSubscriptionWriter, true);
-    locator.set_IP4_address(192, 168, 1, 5);
+    IPLocator::setIPv4(locator, 192, 168, 1, 5);
     locator.port = 9999;
     EXPECT_EQ(*(loc_list_it = builtin.metatrafficUnicastLocatorList.begin()), locator);
-    locator.set_IP4_address(192, 168, 1, 6);
+    IPLocator::setIPv4(locator, 192, 168, 1, 6);
     locator.port = 6666;
     ++loc_list_it;
     EXPECT_EQ(*loc_list_it, locator);
-    locator.set_IP4_address(239, 255, 0, 2);
+    IPLocator::setIPv4(locator, 239, 255, 0, 2);
     locator.port = 32;
     EXPECT_EQ(*(loc_list_it = builtin.metatrafficMulticastLocatorList.begin()), locator);
-    locator.set_IP4_address(239, 255, 0, 3);
+    IPLocator::setIPv4(locator, 239, 255, 0, 3);
     locator.port = 2112;
     ++loc_list_it;
     EXPECT_EQ(*loc_list_it, locator);
-    locator.set_IP4_address(239, 255, 0, 1);
+    IPLocator::setIPv4(locator, 239, 255, 0, 1);
     locator.port = 21120;
     EXPECT_EQ(*(loc_list_it = builtin.initialPeersList.begin()), locator);
+    EXPECT_EQ(builtin.readerHistoryMemoryPolicy, PREALLOCATED_MEMORY_MODE);
+    EXPECT_EQ(builtin.writerHistoryMemoryPolicy, PREALLOCATED_MEMORY_MODE);
+    EXPECT_EQ(builtin.mutation_tries, 55u);
     EXPECT_EQ(port.portBase, 12);
     EXPECT_EQ(port.domainIDGain, 34);
     EXPECT_EQ(port.participantIDGain, 56);
@@ -507,10 +508,8 @@ TEST_F(XMLParserTests, DataBuffer)
     EXPECT_EQ(port.offsetd2, 123);
     EXPECT_EQ(port.offsetd3, 456);
     EXPECT_EQ(rtps_atts.participantID, 9898);
-    EXPECT_EQ(rtps_atts.use_IP4_to_send, true);
-    EXPECT_EQ(rtps_atts.use_IP6_to_send, false);
-    EXPECT_EQ(rtps_atts.throughputController.bytesPerPeriod, 2048);
-    EXPECT_EQ(rtps_atts.throughputController.periodMillisecs, 45);
+    EXPECT_EQ(rtps_atts.throughputController.bytesPerPeriod, 2048u);
+    EXPECT_EQ(rtps_atts.throughputController.periodMillisecs, 45u);
     EXPECT_EQ(rtps_atts.useBuiltinTransports, true);
     EXPECT_EQ(std::string(rtps_atts.getName()), "test_name");
 }

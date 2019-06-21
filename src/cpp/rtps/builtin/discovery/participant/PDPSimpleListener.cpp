@@ -28,7 +28,7 @@
 #include <fastrtps/rtps/reader/RTPSReader.h>
 
 #include <fastrtps/rtps/history/ReaderHistory.h>
-#include <fastrtps/rtps/participant/RTPSParticipantDiscoveryInfo.h>
+#include <fastrtps/rtps/participant/ParticipantDiscoveryInfo.h>
 #include <fastrtps/rtps/participant/RTPSParticipantListener.h>
 
 #include <fastrtps/utils/TimeConversion.h>
@@ -42,9 +42,9 @@ namespace eprosima {
 namespace fastrtps{
 namespace rtps {
 
-
-
-void PDPSimpleListener::onNewCacheChangeAdded(RTPSReader* reader, const CacheChange_t* const change_in)
+void PDPSimpleListener::onNewCacheChangeAdded(
+        RTPSReader* reader,
+        const CacheChange_t * const change_in)
 {
     CacheChange_t* change = (CacheChange_t*)(change_in);
     logInfo(RTPS_PDP,"SPDP Message received");
@@ -61,10 +61,7 @@ void PDPSimpleListener::onNewCacheChangeAdded(RTPSReader* reader, const CacheCha
     {
         //LOAD INFORMATION IN TEMPORAL RTPSParticipant PROXY DATA
         ParticipantProxyData participant_data;
-        CDRMessage_t msg;
-        msg.msg_endian = change->serializedPayload.encapsulation == PL_CDR_BE ? BIGEND:LITTLEEND;
-        msg.length = change->serializedPayload.length;
-        memcpy(msg.buffer,change->serializedPayload.data,msg.length);
+        CDRMessage_t msg(change->serializedPayload);
         if(participant_data.readFromCDRMessage(&msg))
         {
             //AFTER CORRECTLY READING IT
@@ -78,7 +75,7 @@ void PDPSimpleListener::onNewCacheChangeAdded(RTPSReader* reader, const CacheCha
             }
 
             // At this point we can release reader lock.
-            reader->getMutex()->unlock();
+            reader->getMutex().unlock();
 
             //LOOK IF IS AN UPDATED INFORMATION
             ParticipantProxyData* pdata = nullptr;
@@ -93,31 +90,26 @@ void PDPSimpleListener::onNewCacheChangeAdded(RTPSReader* reader, const CacheCha
                 }
             }
 
-            RTPSParticipantDiscoveryInfo info;
-            info.m_guid = participant_data.m_guid;
-            info.m_RTPSParticipantName = participant_data.m_participantName;
-            info.m_propertyList = participant_data.m_properties.properties;
-            info.m_userData = participant_data.m_userData;
+            auto status = (pdata == nullptr) ? ParticipantDiscoveryInfo::DISCOVERED_PARTICIPANT :
+                ParticipantDiscoveryInfo::CHANGED_QOS_PARTICIPANT;
 
             if(pdata == nullptr)
             {
-                info.m_status = DISCOVERED_RTPSPARTICIPANT;
                 //IF WE DIDNT FOUND IT WE MUST CREATE A NEW ONE
                 pdata = new ParticipantProxyData(participant_data);
                 pdata->isAlive = true;
                 pdata->mp_leaseDurationTimer = new RemoteParticipantLeaseDuration(mp_SPDP,
                         pdata,
-                        TimeConv::Time_t2MilliSecondsDouble(pdata->m_leaseDuration));
+                        TimeConv::Duration_t2MilliSecondsDouble(pdata->m_leaseDuration));
                 pdata->mp_leaseDurationTimer->restart_timer();
                 this->mp_SPDP->m_participantProxies.push_back(pdata);
                 lock.unlock();
 
-                mp_SPDP->assignRemoteEndpoints(&participant_data);
                 mp_SPDP->announceParticipantState(false);
+                mp_SPDP->assignRemoteEndpoints(&participant_data);
             }
             else
             {
-                info.m_status = CHANGED_QOS_RTPSPARTICIPANT;
                 pdata->updateData(participant_data);
                 pdata->isAlive = true;
                 lock.unlock();
@@ -126,13 +118,18 @@ void PDPSimpleListener::onNewCacheChangeAdded(RTPSReader* reader, const CacheCha
                     mp_SPDP->mp_EDP->assignRemoteEndpoints(participant_data);
             }
 
-            if(this->mp_SPDP->getRTPSParticipant()->getListener()!=nullptr)
-                this->mp_SPDP->getRTPSParticipant()->getListener()->onRTPSParticipantDiscovery(
-                        this->mp_SPDP->getRTPSParticipant()->getUserRTPSParticipant(),
-                        info);
+            auto listener = this->mp_SPDP->getRTPSParticipant()->getListener();
+            if (listener != nullptr)
+            {
+                ParticipantDiscoveryInfo info;
+                info.status = status;
+                info.info = participant_data;
+
+                listener->onParticipantDiscovery(this->mp_SPDP->getRTPSParticipant()->getUserRTPSParticipant(), std::move(info));
+            }
 
             // Take again the reader lock
-            reader->getMutex()->lock();
+            reader->getMutex().lock();
         }
     }
     else
@@ -140,18 +137,20 @@ void PDPSimpleListener::onNewCacheChangeAdded(RTPSReader* reader, const CacheCha
         GUID_t guid;
         iHandle2GUID(guid, change->instanceHandle);
 
+        ParticipantDiscoveryInfo info;
+        info.status = ParticipantDiscoveryInfo::REMOVED_PARTICIPANT;
+
+        this->mp_SPDP->lookupParticipantProxyData(guid, info.info);
+
         if(this->mp_SPDP->removeRemoteParticipant(guid))
         {
-            if(this->mp_SPDP->getRTPSParticipant()->getListener()!=nullptr)
+            auto listener = this->mp_SPDP->getRTPSParticipant()->getListener();
+            if(listener != nullptr)
             {
-                RTPSParticipantDiscoveryInfo info;
-                info.m_status = REMOVED_RTPSPARTICIPANT;
-                info.m_guid = guid;
-                if(this->mp_SPDP->getRTPSParticipant()->getListener()!=nullptr)
-                    this->mp_SPDP->getRTPSParticipant()->getListener()->onRTPSParticipantDiscovery(
-                            this->mp_SPDP->getRTPSParticipant()->getUserRTPSParticipant(),
-                            info);
+                listener->onParticipantDiscovery(this->mp_SPDP->getRTPSParticipant()->getUserRTPSParticipant(), std::move(info));
             }
+
+            return; // change already removed from history
         }
     }
 

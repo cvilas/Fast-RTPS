@@ -19,7 +19,9 @@
 
 #include "ParticipantImpl.h"
 #include <fastrtps/participant/Participant.h>
-#include <fastrtps/participant/ParticipantDiscoveryInfo.h>
+#include <fastrtps/rtps/participant/ParticipantDiscoveryInfo.h>
+#include <fastrtps/rtps/reader/ReaderDiscoveryInfo.h>
+#include <fastrtps/rtps/writer/WriterDiscoveryInfo.h>
 #include <fastrtps/participant/ParticipantListener.h>
 
 #include <fastrtps/TopicDataType.h>
@@ -45,13 +47,16 @@
 using namespace eprosima::fastrtps;
 using namespace eprosima::fastrtps::rtps;
 
-ParticipantImpl::ParticipantImpl(ParticipantAttributes& patt,Participant* pspart,ParticipantListener* listen):
-    m_att(patt),
-    mp_rtpsParticipant(nullptr),
-    mp_participant(pspart),
-    mp_listener(listen),
+ParticipantImpl::ParticipantImpl(
+        const ParticipantAttributes& patt,
+        Participant* pspart,
+        ParticipantListener* listen)
+    : m_att(patt)
+    , mp_rtpsParticipant(nullptr)
+    , mp_participant(pspart)
+    , mp_listener(listen)
 #pragma warning (disable : 4355 )
-    m_rtps_listener(this)
+    , m_rtps_listener(this)
     {
         mp_participant->mp_impl = this;
     }
@@ -67,10 +72,12 @@ ParticipantImpl::~ParticipantImpl()
         this->removeSubscriber(m_subscribers.begin()->first);
     }
 
-    delete(mp_participant);
-
     if(this->mp_rtpsParticipant != nullptr)
+    {
         RTPSDomain::removeRTPSParticipant(this->mp_rtpsParticipant);
+    }
+
+    delete(mp_participant);
 }
 
 
@@ -107,7 +114,8 @@ const GUID_t& ParticipantImpl::getGuid() const
     return this->mp_rtpsParticipant->getGuid();
 }
 
-Publisher* ParticipantImpl::createPublisher(PublisherAttributes& att,
+Publisher* ParticipantImpl::createPublisher(
+        const PublisherAttributes& att,
         PublisherListener* listen)
 {
     logInfo(PARTICIPANT,"CREATING PUBLISHER IN TOPIC: "<<att.topic.getTopicName());
@@ -147,9 +155,9 @@ Publisher* ParticipantImpl::createPublisher(PublisherAttributes& att,
         logError(PARTICIPANT," Multicast Locator List for Publisher contains invalid Locator");
         return nullptr;
     }
-    if(!att.outLocatorList.isValid())
+    if(!att.remoteLocatorList.isValid())
     {
-        logError(PARTICIPANT,"Output Locator List for Publisher contains invalid Locator");
+        logError(PARTICIPANT,"Remote Locator List for Publisher contains invalid Locator");
         return nullptr;
     }
     if(!att.qos.checkQos() || !att.topic.checkQos())
@@ -169,7 +177,7 @@ Publisher* ParticipantImpl::createPublisher(PublisherAttributes& att,
     watt.endpoint.reliabilityKind = att.qos.m_reliability.kind == RELIABLE_RELIABILITY_QOS ? RELIABLE : BEST_EFFORT;
     watt.endpoint.topicKind = att.topic.topicKind;
     watt.endpoint.unicastLocatorList = att.unicastLocatorList;
-    watt.endpoint.outLocatorList = att.outLocatorList;
+    watt.endpoint.remoteLocatorList = att.remoteLocatorList;
     watt.mode = att.qos.m_publishMode.kind == eprosima::fastrtps::SYNCHRONOUS_PUBLISH_MODE ? SYNCHRONOUS_WRITER : ASYNCHRONOUS_WRITER;
     watt.endpoint.properties = att.properties;
     if(att.getEntityID()>0)
@@ -181,12 +189,13 @@ Publisher* ParticipantImpl::createPublisher(PublisherAttributes& att,
         watt.endpoint.setUserDefinedID((uint8_t)att.getUserDefinedID());
     }
     watt.times = att.times;
+    watt.matched_readers_allocation = att.matched_subscriber_allocation;
 
     // TODO(Ricardo) Remove in future
     // Insert topic_name and partitions
     Property property;
     property.name("topic_name");
-    property.value(att.topic.getTopicName());
+    property.value(att.topic.getTopicName().c_str());
     watt.endpoint.properties.properties().push_back(std::move(property));
     if(att.qos.m_partition.getNames().size() > 0)
     {
@@ -199,11 +208,18 @@ Publisher* ParticipantImpl::createPublisher(PublisherAttributes& att,
         property.value(std::move(partitions));
         watt.endpoint.properties.properties().push_back(std::move(property));
     }
+    if (att.qos.m_disablePositiveACKs.enabled &&
+            att.qos.m_disablePositiveACKs.duration != c_TimeInfinite)
+    {
+        watt.disable_positive_acks = true;
+        watt.keep_duration = att.qos.m_disablePositiveACKs.duration;
+    }
 
-    RTPSWriter* writer = RTPSDomain::createRTPSWriter(this->mp_rtpsParticipant,
-            watt,
-            (WriterHistory*)&pubimpl->m_history,
-            (WriterListener*)&pubimpl->m_writerListener);
+    RTPSWriter* writer = RTPSDomain::createRTPSWriter(
+                this->mp_rtpsParticipant,
+                watt,
+                (WriterHistory*)&pubimpl->m_history,
+                (WriterListener*)&pubimpl->m_writerListener);
     if(writer == nullptr)
     {
         logError(PARTICIPANT,"Problem creating associated Writer");
@@ -218,22 +234,17 @@ Publisher* ParticipantImpl::createPublisher(PublisherAttributes& att,
     m_publishers.push_back(pubpair);
 
     //REGISTER THE WRITER
-    this->mp_rtpsParticipant->registerWriter(writer,att.topic,att.qos);
+    this->mp_rtpsParticipant->registerWriter(writer, att.topic, att.qos);
 
     return pub;
-}
-
-
-std::pair<StatefulReader*,StatefulReader*> ParticipantImpl::getEDPReaders(){
-
-    return mp_rtpsParticipant->getEDPReaders();
 }
 
 std::vector<std::string> ParticipantImpl::getParticipantNames() const {
     return mp_rtpsParticipant->getParticipantNames();
 }
 
-Subscriber* ParticipantImpl::createSubscriber(SubscriberAttributes& att,
+Subscriber* ParticipantImpl::createSubscriber(
+        const SubscriberAttributes& att,
         SubscriberListener* listen)
 {
     logInfo(PARTICIPANT,"CREATING SUBSCRIBER IN TOPIC: "<<att.topic.getTopicName())
@@ -269,7 +280,7 @@ Subscriber* ParticipantImpl::createSubscriber(SubscriberAttributes& att,
         logError(PARTICIPANT," Multicast Locator List for Subscriber contains invalid Locator");
         return nullptr;
     }
-    if(!att.outLocatorList.isValid())
+    if(!att.remoteLocatorList.isValid())
     {
         logError(PARTICIPANT,"Output Locator List for Subscriber contains invalid Locator");
         return nullptr;
@@ -289,7 +300,7 @@ Subscriber* ParticipantImpl::createSubscriber(SubscriberAttributes& att,
     ratt.endpoint.reliabilityKind = att.qos.m_reliability.kind == RELIABLE_RELIABILITY_QOS ? RELIABLE : BEST_EFFORT;
     ratt.endpoint.topicKind = att.topic.topicKind;
     ratt.endpoint.unicastLocatorList = att.unicastLocatorList;
-    ratt.endpoint.outLocatorList = att.outLocatorList;
+    ratt.endpoint.remoteLocatorList = att.remoteLocatorList;
     ratt.expectsInlineQos = att.expectsInlineQos;
     ratt.endpoint.properties = att.properties;
     if(att.getEntityID()>0)
@@ -302,7 +313,7 @@ Subscriber* ParticipantImpl::createSubscriber(SubscriberAttributes& att,
     // Insert topic_name and partitions
     Property property;
     property.name("topic_name");
-    property.value(att.topic.getTopicName());
+    property.value(att.topic.getTopicName().c_str());
     ratt.endpoint.properties.properties().push_back(std::move(property));
     if(att.qos.m_partition.getNames().size() > 0)
     {
@@ -314,6 +325,10 @@ Subscriber* ParticipantImpl::createSubscriber(SubscriberAttributes& att,
         }
         property.value(std::move(partitions));
         ratt.endpoint.properties.properties().push_back(std::move(property));
+    }
+    if (att.qos.m_disablePositiveACKs.enabled)
+    {
+        ratt.disable_positive_acks = true;
     }
 
     RTPSReader* reader = RTPSDomain::createRTPSReader(this->mp_rtpsParticipant,
@@ -340,7 +355,9 @@ Subscriber* ParticipantImpl::createSubscriber(SubscriberAttributes& att,
 }
 
 
-bool ParticipantImpl::getRegisteredType(const char* typeName, TopicDataType** type)
+bool ParticipantImpl::getRegisteredType(
+        const char* typeName,
+        TopicDataType** type)
 {
     for(std::vector<TopicDataType*>::iterator it=m_types.begin();
             it!=m_types.end();++it)
@@ -361,7 +378,8 @@ bool ParticipantImpl::registerType(TopicDataType* type)
         logError(PARTICIPANT, "Registered Type must have maximum byte size > 0");
         return false;
     }
-    if (std::string(type->getName()).size() <= 0)
+    const char * name = type->getName();
+    if (strlen(name) <= 0)
     {
         logError(PARTICIPANT, "Registered Type must have a name");
         return false;
@@ -423,45 +441,74 @@ bool ParticipantImpl::unregisterType(const char* typeName)
 
 
 
-void ParticipantImpl::MyRTPSParticipantListener::onRTPSParticipantDiscovery(RTPSParticipant* part,RTPSParticipantDiscoveryInfo rtpsinfo)
+void ParticipantImpl::MyRTPSParticipantListener::onParticipantDiscovery(
+        RTPSParticipant*,
+        rtps::ParticipantDiscoveryInfo&& info)
 {
     if(this->mp_participantimpl->mp_listener!=nullptr)
     {
-        ParticipantDiscoveryInfo info;
-        info.rtps = rtpsinfo;
-        this->mp_participantimpl->mp_rtpsParticipant = part;
-        this->mp_participantimpl->mp_listener->onParticipantDiscovery(mp_participantimpl->mp_participant,info);
+        this->mp_participantimpl->mp_listener->onParticipantDiscovery(mp_participantimpl->mp_participant, std::move(info));
     }
 }
 
 #if HAVE_SECURITY
-void ParticipantImpl::MyRTPSParticipantListener::onRTPSParticipantAuthentication(RTPSParticipant* part, const RTPSParticipantAuthenticationInfo& rtps_info)
+void ParticipantImpl::MyRTPSParticipantListener::onParticipantAuthentication(
+        RTPSParticipant*,
+        ParticipantAuthenticationInfo&& info)
 {
     if(this->mp_participantimpl->mp_listener != nullptr)
     {
-        ParticipantAuthenticationInfo info;
-        info.rtps = rtps_info;
-        this->mp_participantimpl->mp_rtpsParticipant = part;
-        this->mp_participantimpl->mp_listener->onParticipantAuthentication(mp_participantimpl->mp_participant, info);
+        this->mp_participantimpl->mp_listener->onParticipantAuthentication(mp_participantimpl->mp_participant, std::move(info));
     }
 }
 #endif
 
-bool ParticipantImpl::newRemoteEndpointDiscovered(const GUID_t& partguid, uint16_t endpointId,
+void ParticipantImpl::MyRTPSParticipantListener::onReaderDiscovery(
+        RTPSParticipant*,
+        rtps::ReaderDiscoveryInfo&& info)
+{
+    if(this->mp_participantimpl->mp_listener!=nullptr)
+    {
+        this->mp_participantimpl->mp_listener->onSubscriberDiscovery(mp_participantimpl->mp_participant, std::move(info));
+    }
+}
+
+void ParticipantImpl::MyRTPSParticipantListener::onWriterDiscovery(
+        RTPSParticipant*,
+        rtps::WriterDiscoveryInfo&& info)
+{
+    if(this->mp_participantimpl->mp_listener!=nullptr)
+    {
+        this->mp_participantimpl->mp_listener->onPublisherDiscovery(mp_participantimpl->mp_participant, std::move(info));
+    }
+}
+
+bool ParticipantImpl::newRemoteEndpointDiscovered(
+        const GUID_t& partguid,
+        uint16_t endpointId,
         EndpointKind_t kind)
 {
     if (kind == WRITER)
         return this->mp_rtpsParticipant->newRemoteWriterDiscovered(partguid, endpointId);
-    else 
+    else
         return this->mp_rtpsParticipant->newRemoteReaderDiscovered(partguid, endpointId);
 }
 
-bool ParticipantImpl::get_remote_writer_info(const GUID_t& writerGuid, WriterProxyData& returnedInfo)
+bool ParticipantImpl::get_remote_writer_info(
+        const GUID_t& writerGuid,
+        WriterProxyData& returnedInfo)
 {
     return mp_rtpsParticipant->get_remote_writer_info(writerGuid, returnedInfo);
 }
 
-bool ParticipantImpl::get_remote_reader_info(const GUID_t& readerGuid, ReaderProxyData& returnedInfo)
+bool ParticipantImpl::get_remote_reader_info(
+        const GUID_t& readerGuid,
+        ReaderProxyData& returnedInfo)
 {
     return mp_rtpsParticipant->get_remote_reader_info(readerGuid, returnedInfo);
+}
+
+ResourceEvent& ParticipantImpl::get_resource_event() const
+{
+    return mp_rtpsParticipant->get_resource_event();
 }

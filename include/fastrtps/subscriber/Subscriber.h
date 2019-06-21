@@ -22,8 +22,8 @@
 
 #include "../rtps/common/Guid.h"
 #include "../attributes/SubscriberAttributes.h"
-
-
+#include "../qos/DeadlineMissedStatus.h"
+#include "../qos/LivelinessChangedStatus.h"
 
 namespace eprosima {
 namespace fastrtps {
@@ -33,20 +33,23 @@ class SampleInfo_t;
 
 /**
  * Class Subscriber, contains the public API that allows the user to control the reception of messages.
- * This class should not be instantiated directly. DomainRTPSParticipant class should be used to correctly create this element.
+ * This class should not be instantiated directly.
+ * DomainRTPSParticipant class should be used to correctly create this element.
  * @ingroup FASTRTPS_MODULE
  * @snippet fastrtps_example.cpp ex_Subscriber
  */
 class RTPS_DllAPI Subscriber
 {
     friend class SubscriberImpl;
-    virtual ~Subscriber(){};
-    public:
+
+    virtual ~Subscriber() {}
+
+public:
     /**
+     * Constructor from a SubscriberImpl pointer
      * @param pimpl Actual implementation of the subscriber
      */
-    Subscriber(SubscriberImpl* pimpl):mp_impl(pimpl){};
-
+    Subscriber(SubscriberImpl* pimpl) : mp_impl(pimpl) {}
 
     /**
      * Get the associated GUID
@@ -65,28 +68,32 @@ class RTPS_DllAPI Subscriber
      * @param info Pointer to a SampleInfo_t structure that informs you about your sample.
      * @return True if a sample was read.
      */
-    bool readNextData(void* data,SampleInfo_t* info);
+    bool readNextData(
+            void* data,
+            SampleInfo_t* info);
+
     /**
      * Take next Data from the Subscriber. The data is removed from the subscriber.
      * @param data Pointer to the object where you want the data stored.
      * @param info Pointer to a SampleInfo_t structure that informs you about your sample.
      * @return True if a sample was taken.
      */
-    bool takeNextData(void* data,SampleInfo_t* info);
-
+    bool takeNextData(
+            void* data,
+            SampleInfo_t* info);
 
     /**
      * Update the Attributes of the subscriber;
      * @param att Reference to a SubscriberAttributes object to update the parameters;
      * @return True if correctly updated, false if ANY of the updated parameters cannot be updated
      */
-    bool updateAttributes(SubscriberAttributes& att);
+    bool updateAttributes(const SubscriberAttributes& att);
 
     /**
      * Get the Attributes of the Subscriber.
      * @return Attributes of the subscriber
      */
-    SubscriberAttributes getAttributes() const;
+    const SubscriberAttributes& getAttributes() const;
 
     /*!
      * @brief Returns there is a clean state with all Publishers.
@@ -102,8 +109,19 @@ class RTPS_DllAPI Subscriber
      */
     uint64_t getUnreadCount() const;
 
-    private:
+    /**
+     * @brief Get the requested deadline missed status
+     * @return The deadline missed status
+     */
+    void get_requested_deadline_missed_status(RequestedDeadlineMissedStatus& status);
 
+    /**
+     * @brief Returns the liveliness changed status
+     * @param status Liveliness changed status
+     */
+    void get_liveliness_changed_status(LivelinessChangedStatus& status);
+
+private:
     SubscriberImpl* mp_impl;
 };
 

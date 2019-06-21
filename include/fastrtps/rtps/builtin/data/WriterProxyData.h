@@ -17,8 +17,8 @@
  *
  */
 
-#ifndef WRITERPROXYDATA_H_
-#define WRITERPROXYDATA_H_
+#ifndef _RTPS_BUILTIN_DATA_WRITERPROXYDATA_H_
+#define _RTPS_BUILTIN_DATA_WRITERPROXYDATA_H_
 #ifndef DOXYGEN_SHOULD_SKIP_THIS_PUBLIC
 
 #include "../../../attributes/TopicAttributes.h"
@@ -27,7 +27,11 @@
 
 #include "../../attributes/ReaderAttributes.h"
 
+#include "../../../utils/fixed_size_string.hpp"
 
+#if HAVE_SECURITY
+#include "../../security/accesscontrol/EndpointSecurityAttributes.h"
+#endif
 
 namespace eprosima {
 namespace fastrtps{
@@ -170,42 +174,42 @@ class WriterProxyData
             return m_RTPSParticipantKey;
         }
 
-        RTPS_DllAPI void typeName(const std::string& typeName)
+        RTPS_DllAPI void typeName(const string_255& typeName)
         {
             m_typeName = typeName;
         }
 
-        RTPS_DllAPI void typeName(std::string&& typeName)
+        RTPS_DllAPI void typeName(string_255&& typeName)
         {
             m_typeName = std::move(typeName);
         }
 
-        RTPS_DllAPI std::string typeName() const
+        RTPS_DllAPI const string_255& typeName() const
         {
             return m_typeName;
         }
 
-        RTPS_DllAPI std::string& typeName()
+        RTPS_DllAPI string_255& typeName()
         {
             return m_typeName;
         }
 
-        RTPS_DllAPI void topicName(const std::string& topicName)
+        RTPS_DllAPI void topicName(const string_255& topicName)
         {
             m_topicName = topicName;
         }
 
-        RTPS_DllAPI void topicName(std::string&& topicName)
+        RTPS_DllAPI void topicName(string_255&& topicName)
         {
             m_topicName = std::move(topicName);
         }
 
-        RTPS_DllAPI std::string topicName() const
+        RTPS_DllAPI const string_255& topicName() const
         {
             return m_topicName;
         }
 
-        RTPS_DllAPI std::string& topicName()
+        RTPS_DllAPI string_255& topicName()
         {
             return m_topicName;
         }
@@ -270,16 +274,70 @@ class WriterProxyData
             return m_topicKind;
         }
 
+        RTPS_DllAPI void type_id(TypeIdV1 type_id)
+        {
+            m_type_id = type_id;
+        }
+
+        RTPS_DllAPI TypeIdV1 type_id() const
+        {
+            return m_type_id;
+        }
+
+        RTPS_DllAPI TypeIdV1& type_id()
+        {
+            return m_type_id;
+        }
+
+        RTPS_DllAPI void type(TypeObjectV1 type)
+        {
+            m_type = type;
+        }
+
+        RTPS_DllAPI TypeObjectV1 type() const
+        {
+            return m_type;
+        }
+
+        RTPS_DllAPI TypeObjectV1& type()
+        {
+            return m_type;
+        }
+
+        RTPS_DllAPI void topicDiscoveryKind(TopicDiscoveryKind_t topicDiscoveryKind)
+        {
+            m_topicDiscoveryKind = topicDiscoveryKind;
+        }
+
+        RTPS_DllAPI TopicDiscoveryKind_t topicDiscoveryKind() const
+        {
+            return m_topicDiscoveryKind;
+        }
+
+        RTPS_DllAPI TopicDiscoveryKind_t& topicDiscoveryKind()
+        {
+            return m_topicDiscoveryKind;
+        }
+
         //!WriterQOS
         WriterQos m_qos;
+
+#if HAVE_SECURITY
+        //!EndpointSecurityInfo.endpoint_security_attributes
+        security::EndpointSecurityAttributesMask security_attributes_;
+
+        //!EndpointSecurityInfo.plugin_endpoint_security_attributes
+        security::PluginEndpointSecurityAttributesMask plugin_security_attributes_;
+#endif
+
         //!Clear the information and return the object to the default state.
         void clear();
         //!Update certain parameters from another object.
         void update(WriterProxyData* rdata);
         //!Copy all information from another object.
         void copy(WriterProxyData* rdata);
-        //!Convert the information to a parameter list to be send in a CDRMessage.
-        ParameterList_t toParameterList();
+        //!Write as a parameter list on a CDRMessage_t
+        bool writeToCDRMessage(CDRMessage_t* msg, bool write_encapsulation);
         //!Read a parameter list from a CDRMessage_t.
         RTPS_DllAPI bool readFromCDRMessage(CDRMessage_t* msg);
 
@@ -307,10 +365,10 @@ class WriterProxyData
         InstanceHandle_t m_RTPSParticipantKey;
 
         //!Type name
-        std::string m_typeName;
+        string_255 m_typeName;
 
         //!Topic name
-        std::string m_topicName;
+        string_255 m_topicName;
 
         //!User defined ID
         uint16_t m_userDefinedId;
@@ -326,6 +384,15 @@ class WriterProxyData
 
         //!Persistence GUID
         GUID_t persistence_guid_;
+
+        //!Topic Discovery Kind
+        TopicDiscoveryKind_t m_topicDiscoveryKind;
+
+        //!Type Identifier
+        TypeIdV1 m_type_id;
+
+        //!Type Object
+        TypeObjectV1 m_type;
 };
 
 }
@@ -333,4 +400,4 @@ class WriterProxyData
 } /* namespace eprosima */
 
 #endif
-#endif /* WRITERPROXYDATA_H_ */
+#endif // _RTPS_BUILTIN_DATA_WRITERPROXYDATA_H_

@@ -43,10 +43,11 @@ class MessageReceiver
 {
     public:
         /**
+         * @param participant
          * @param rec_buffer_size
          */
         MessageReceiver(RTPSParticipantImpl* participant, uint32_t rec_buffer_size);
-        MessageReceiver(RTPSParticipantImpl* participant);
+
         virtual ~MessageReceiver();
         //!Reset the MessageReceiver to process a new message.
         void reset();
@@ -59,21 +60,17 @@ class MessageReceiver
 
         /**
          * Process a new CDR message.
-         * @param[in] RTPSParticipantguidprefix RTPSParticipant Guid Prefix
          * @param[in] loc Locator indicating the sending address.
          * @param[in] msg Pointer to the message
          */
-        void processCDRMsg(const GuidPrefix_t& RTPSParticipantguidprefix,Locator_t* loc, CDRMessage_t*msg);
+        void processCDRMsg(const Locator_t& loc, CDRMessage_t*msg);
 
         //!Pointer to the Listen Resource that contains this MessageReceiver.
 
         //!Received message
-        CDRMessage_t m_rec_msg;
 #if HAVE_SECURITY
         CDRMessage_t m_crypto_msg;
 #endif
-        //!PArameter list
-        ParameterList_t m_ParamList;
         // Functions to associate/remove associatedendpoints
         void associateEndpoint(Endpoint *to_add);
         void removeEndpoint(Endpoint *to_remove);
@@ -90,18 +87,12 @@ class MessageReceiver
         GuidPrefix_t sourceGuidPrefix;
         //!GuidPrefix of the entity that receives the message. GuidPrefix of the RTPSParticipant.
         GuidPrefix_t destGuidPrefix;
-        //!Reply addresses (unicast).
-        LocatorList_t unicastReplyLocatorList;
-        //!Reply addresses (multicast).
-        LocatorList_t multicastReplyLocatorList;
         //!Has the message timestamp?
         bool haveTimestamp;
         //!Timestamp associated with the message
         Time_t timestamp;
         //!Version of the protocol used by the receiving end.
         ProtocolVersion_t destVersion;
-        //!Default locator used in reset
-        Locator_t defUniLoc;
 
         uint16_t mMaxPayload_;
 
@@ -135,21 +126,20 @@ class MessageReceiver
          *
          * @param msg
          * @param smh
-         * @param last
          * @return
          */
-        bool proc_Submsg_Data(CDRMessage_t*msg, SubmessageHeader_t* smh,bool*last);
-        bool proc_Submsg_DataFrag(CDRMessage_t*msg, SubmessageHeader_t* smh, bool*last);
-        bool proc_Submsg_Acknack(CDRMessage_t*msg, SubmessageHeader_t* smh,bool*last);
-        bool proc_Submsg_Heartbeat(CDRMessage_t*msg, SubmessageHeader_t* smh,bool*last);
-        bool proc_Submsg_Gap(CDRMessage_t*msg, SubmessageHeader_t* smh,bool*last);
-        bool proc_Submsg_InfoTS(CDRMessage_t*msg, SubmessageHeader_t* smh,bool*last);
-        bool proc_Submsg_InfoDST(CDRMessage_t*msg,SubmessageHeader_t* smh,bool*last);
-        bool proc_Submsg_InfoSRC(CDRMessage_t*msg,SubmessageHeader_t* smh,bool*last);
-        bool proc_Submsg_NackFrag(CDRMessage_t*msg, SubmessageHeader_t* smh, bool*last);
-        bool proc_Submsg_HeartbeatFrag(CDRMessage_t*msg, SubmessageHeader_t* smh, bool*last);
-        bool proc_Submsg_SecureMessage(CDRMessage_t*msg, SubmessageHeader_t* smh,bool*last);
-        bool proc_Submsg_SecureSubMessage(CDRMessage_t*msg, SubmessageHeader_t* smh,bool*last);
+        bool proc_Submsg_Data(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_DataFrag(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_Acknack(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_Heartbeat(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_Gap(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_InfoTS(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_InfoDST(CDRMessage_t*msg,SubmessageHeader_t* smh);
+        bool proc_Submsg_InfoSRC(CDRMessage_t*msg,SubmessageHeader_t* smh);
+        bool proc_Submsg_NackFrag(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_HeartbeatFrag(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_SecureMessage(CDRMessage_t*msg, SubmessageHeader_t* smh);
+        bool proc_Submsg_SecureSubMessage(CDRMessage_t*msg, SubmessageHeader_t* smh);
 
         RTPSParticipantImpl* participant_;
 };

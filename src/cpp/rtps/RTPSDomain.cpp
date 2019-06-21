@@ -29,7 +29,10 @@
 #include <fastrtps/transport/test_UDPv4Transport.h>
 
 #include <fastrtps/utils/IPFinder.h>
+#include <fastrtps/utils/IPLocator.h>
 #include <fastrtps/utils/eClock.h>
+#include <fastrtps/utils/System.h>
+#include <fastrtps/utils/md5.h>
 
 #include <fastrtps/rtps/writer/RTPSWriter.h>
 #include <fastrtps/rtps/reader/RTPSReader.h>
@@ -39,7 +42,7 @@ namespace fastrtps{
 namespace rtps {
 
 std::mutex RTPSDomain::m_mutex;
-std::atomic<uint32_t> RTPSDomain::m_maxRTPSParticipantID(0);
+std::atomic<uint32_t> RTPSDomain::m_maxRTPSParticipantID(1);
 std::vector<RTPSDomain::t_p_RTPSParticipant> RTPSDomain::m_RTPSParticipants;
 std::set<uint32_t> RTPSDomain::m_RTPSParticipantIDs;
 
@@ -56,20 +59,18 @@ void RTPSDomain::stopAll()
     eClock::my_sleep(100);
 }
 
-RTPSParticipant* RTPSDomain::createParticipant(RTPSParticipantAttributes& PParam,
+RTPSParticipant* RTPSDomain::createParticipant(
+        const RTPSParticipantAttributes& attrs,
         RTPSParticipantListener* listen)
 {
     std::lock_guard<std::mutex> guard(m_mutex);
     logInfo(RTPS_PARTICIPANT,"");
 
+    RTPSParticipantAttributes PParam = attrs;
+
     if(PParam.builtin.leaseDuration < c_TimeInfinite && PParam.builtin.leaseDuration <= PParam.builtin.leaseDuration_announcementperiod) //TODO CHeckear si puedo ser infinito
     {
         logError(RTPS_PARTICIPANT,"RTPSParticipant Attributes: LeaseDuration should be >= leaseDuration announcement period");
-        return nullptr;
-    }
-    if(PParam.use_IP4_to_send == false && PParam.use_IP6_to_send == false)
-    {
-        logError(RTPS_PARTICIPANT,"Use IP4 OR User IP6 to send must be set to true");
         return nullptr;
     }
     uint32_t ID;
@@ -77,7 +78,9 @@ RTPSParticipant* RTPSDomain::createParticipant(RTPSParticipantAttributes& PParam
     {
         ID = getNewId();
         while(m_RTPSParticipantIDs.insert(ID).second == false)
+        {
             ID = getNewId();
+        }
     }
     else
     {
@@ -100,39 +103,50 @@ RTPSParticipant* RTPSDomain::createParticipant(RTPSParticipantAttributes& PParam
     }
 
     PParam.participantID = ID;
-    int pid;
-#if defined(__cplusplus_winrt)
-    pid = (int)GetCurrentProcessId();
-#elif defined(_WIN32)
-    pid = (int)_getpid();
-#else
-    pid = (int)getpid();
-#endif
+    int pid = System::GetPID();
     GuidPrefix_t guidP;
     LocatorList_t loc;
     IPFinder::getIP4Address(&loc);
+
+    guidP.value[0] = c_VendorId_eProsima[0];
+    guidP.value[1] = c_VendorId_eProsima[1];
+
     if(loc.size()>0)
     {
-        guidP.value[0] = c_VendorId_eProsima[0];
-        guidP.value[1] = c_VendorId_eProsima[1];
-        guidP.value[2] = loc.begin()->address[14];
-        guidP.value[3] = loc.begin()->address[15];
+        MD5 md5;
+        for(auto& l : loc)
+        {
+            md5.update(l.address, sizeof(l.address));
+        }
+        md5.finalize();
+        uint16_t hostid = 0;
+        for(size_t i = 0; i < sizeof(md5.digest); i += 2)
+        {
+            hostid ^= ((md5.digest[i] << 8) | md5.digest[i+1]);
+        }
+        guidP.value[2] = octet(hostid);
+        guidP.value[3] = octet(hostid >> 8);
     }
     else
     {
-        guidP.value[0] = c_VendorId_eProsima[0];
-        guidP.value[1] = c_VendorId_eProsima[1];
         guidP.value[2] = 127;
         guidP.value[3] = 1;
+
+        if (PParam.builtin.initialPeersList.empty())
+        {
+            Locator_t local;
+            IPLocator::setIPv4(local, 127, 0, 0, 1);
+            PParam.builtin.initialPeersList.push_back(local);
+        }
     }
-    guidP.value[4] = ((octet*)&pid)[0];
-    guidP.value[5] = ((octet*)&pid)[1];
-    guidP.value[6] = ((octet*)&pid)[2];
-    guidP.value[7] = ((octet*)&pid)[3];
-    guidP.value[8] = ((octet*)&ID)[0];
-    guidP.value[9] = ((octet*)&ID)[1];
-    guidP.value[10] = ((octet*)&ID)[2];
-    guidP.value[11] = ((octet*)&ID)[3];
+    guidP.value[4] = octet(pid);
+    guidP.value[5] = octet(pid >> 8);
+    guidP.value[6] = octet(pid >> 16);
+    guidP.value[7] = octet(pid >> 24);
+    guidP.value[8] = octet(ID);
+    guidP.value[9] = octet(ID >> 8);
+    guidP.value[10] = octet(ID >> 16);
+    guidP.value[11] = octet(ID >> 24);
 
     RTPSParticipant* p = new RTPSParticipant(nullptr);
     RTPSParticipantImpl* pimpl = new RTPSParticipantImpl(PParam,guidP,p,listen);
@@ -184,7 +198,11 @@ void RTPSDomain::removeRTPSParticipant_nts(std::vector<RTPSDomain::t_p_RTPSParti
     m_RTPSParticipants.erase(it);
 }
 
-RTPSWriter* RTPSDomain::createRTPSWriter(RTPSParticipant* p, WriterAttributes& watt, WriterHistory* hist, WriterListener* listen)
+RTPSWriter* RTPSDomain::createRTPSWriter(
+        RTPSParticipant* p,
+        WriterAttributes& watt,
+        WriterHistory* hist,
+        WriterListener* listen)
 {
     std::lock_guard<std::mutex> guard(m_mutex);
     for(auto it= m_RTPSParticipants.begin();it!=m_RTPSParticipants.end();++it)
@@ -218,8 +236,11 @@ bool RTPSDomain::removeRTPSWriter(RTPSWriter* writer)
     return false;
 }
 
-RTPSReader* RTPSDomain::createRTPSReader(RTPSParticipant* p, ReaderAttributes& ratt,
-        ReaderHistory* rhist, ReaderListener* rlisten)
+RTPSReader* RTPSDomain::createRTPSReader(
+        RTPSParticipant* p,
+        ReaderAttributes& ratt,
+        ReaderHistory* rhist,
+        ReaderListener* rlisten)
 {
     std::lock_guard<std::mutex> guard(m_mutex);
     for(auto it= m_RTPSParticipants.begin();it!=m_RTPSParticipants.end();++it)
@@ -257,6 +278,3 @@ bool RTPSDomain::removeRTPSReader(RTPSReader* reader)
 } /* namespace  rtps */
 } /* namespace  fastrtps */
 } /* namespace eprosima */
-
-
-

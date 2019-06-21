@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /*!
- * @file PropertyQos.h	
+ * @file Property.h
  */
 #ifndef _RTPS_COMMON_PROPERTYQOS_H_
 #define  _RTPS_COMMON_PROPERTYQOS_H_
@@ -63,6 +63,12 @@ class Property
             value_ = std::move(property.value_);
             propagate_ = property.propagate_;
             return *this;
+        }
+
+        bool operator==(const Property& b) const
+        {
+            return (this->name_ == b.name_) &&
+                   (this->value_ == b.value_);
         }
 
         void name(const std::string& name)

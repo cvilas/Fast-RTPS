@@ -27,6 +27,11 @@
 namespace eprosima {
 namespace fastrtps{
 
+namespace types
+{
+class TypeIdentifier;
+}
+
 class TopicAttributes;
 class ReaderQos;
 class WriterQos;
@@ -89,6 +94,7 @@ class EDP
 
         /**
          * After a new local ReaderProxyData has been created some processing is needed (depends on the implementation).
+         * @param reader Pointer to the Reader object.
          * @param rdata Pointer to the ReaderProxyData object.
          * @return True if correct.
          */
@@ -96,6 +102,7 @@ class EDP
 
         /**
          * After a new local WriterProxyData has been created some processing is needed (depends on the implementation).
+         * @param writer Pointer to the Writer object.
          * @param wdata Pointer to the Writer ProxyData object.
          * @return True if correct.
          */
@@ -108,7 +115,7 @@ class EDP
          * @param qos QoS policies dictated by the subscriber
          * @return True if correct.
          */
-        bool newLocalReaderProxyData(RTPSReader* R,TopicAttributes& att, ReaderQos& qos);
+        bool newLocalReaderProxyData(RTPSReader* R, const TopicAttributes& att, const ReaderQos& qos);
         /**
          * Create a new ReaderPD for a local Writer.
          * @param W Pointer to the RTPSWriter.
@@ -116,21 +123,23 @@ class EDP
          * @param qos QoS policies dictated by the publisher
          * @return True if correct.
          */
-        bool newLocalWriterProxyData(RTPSWriter* W,TopicAttributes& att, WriterQos& qos);
+        bool newLocalWriterProxyData(RTPSWriter* W, const TopicAttributes& att, const WriterQos& qos);
         /**
          * A previously created Reader has been updated
          * @param R Pointer to the reader;
+         * @param att Attributes of the associated topic
          * @param qos QoS policies dictated by the subscriber
          * @return True if correctly updated
          */
-        bool updatedLocalReader(RTPSReader* R,ReaderQos& qos);
+        bool updatedLocalReader(RTPSReader* R, const TopicAttributes& att, const ReaderQos& qos);
         /**
          * A previously created Writer has been updated
          * @param W Pointer to the Writer
+         * @param att Attributes of the associated topic
          * @param qos QoS policies dictated by the publisher
          * @return True if correctly updated
          */
-        bool updatedLocalWriter(RTPSWriter* W,WriterQos& qos);
+        bool updatedLocalWriter(RTPSWriter* W, const TopicAttributes& att, const WriterQos& qos);
         /**
          * Check the validity of a matching between a RTPSWriter and a ReaderProxyData object.
          * @param wdata Pointer to the WriterProxyData object.
@@ -148,15 +157,16 @@ class EDP
 
         /**
          * Unpair a WriterProxyData object from all local readers.
-         * @param pdata Pointer to the participant proxy data.
-         * @param wdata Pointer to the WriterProxyData object.
+         * @param participant_guid GUID of the participant.
+         * @param writer_guid GUID of the writer.
          * @return True if correct.
          */
         bool unpairWriterProxy(const GUID_t& participant_guid, const GUID_t& writer_guid);
+
         /**
          * Unpair a ReaderProxyData object from all local writers.
-         * @param rdata Pointer to the ReaderProxyData object.
-         * @param pdata Pointer to the participant proxy data.
+         * @param participant_guid GUID of the participant.
+         * @param reader_guid GUID of the reader.
          * @return True if correct.
          */
         bool unpairReaderProxy(const GUID_t& participant_guid, const GUID_t& reader_guid);
@@ -218,6 +228,11 @@ class EDP
          * @return True
          */
         bool pairingWriter(RTPSWriter* W, const ParticipantProxyData& pdata, const WriterProxyData& wdata);
+
+        bool checkTypeIdentifier(const WriterProxyData* wdata, const ReaderProxyData* rdata) const;
+
+        bool checkTypeIdentifier(const eprosima::fastrtps::types::TypeIdentifier * wti,
+                const eprosima::fastrtps::types::TypeIdentifier * rti) const;
 };
 
 }

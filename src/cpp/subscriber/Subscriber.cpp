@@ -18,6 +18,8 @@
  */
 
 #include <fastrtps/subscriber/Subscriber.h>
+#include <fastrtps/log/Log.h>
+
 #include "SubscriberImpl.h"
 
 using namespace eprosima::fastrtps;
@@ -42,12 +44,12 @@ bool Subscriber::takeNextData(void* data,SampleInfo_t* info)
     return mp_impl->takeNextData(data,info);
 }
 
-bool Subscriber::updateAttributes(SubscriberAttributes& att)
+bool Subscriber::updateAttributes(const SubscriberAttributes& att)
 {
     return mp_impl->updateAttributes(att);
 }
 
-SubscriberAttributes Subscriber::getAttributes() const
+const SubscriberAttributes& Subscriber::getAttributes() const
 {
     return mp_impl->getAttributes();
 }
@@ -60,4 +62,15 @@ bool Subscriber::isInCleanState() const
 uint64_t Subscriber::getUnreadCount() const
 {
 	return mp_impl->getUnreadCount();
+}
+
+void Subscriber::get_requested_deadline_missed_status(RequestedDeadlineMissedStatus& status)
+{
+    mp_impl->get_requested_deadline_missed_status(status);
+}
+
+void Subscriber::get_liveliness_changed_status(LivelinessChangedStatus &status)
+{
+    (void)status;
+    logWarning(SUBSCRIBER, "get_liveliness_changed_status is not implemented yet");
 }

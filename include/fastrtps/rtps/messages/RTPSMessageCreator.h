@@ -26,10 +26,21 @@
 
 namespace eprosima {
 namespace fastrtps{
-
-class ParameterList_t;
-
 namespace rtps{
+
+//!An interface to add inline qos parameters to a CDRMessage
+class InlineQosWriter
+{
+public:
+    virtual ~InlineQosWriter() = default;
+
+    /**
+     * Writes inline QOS parameters to a CDRMessage.
+     * @param msg Pointer to the message.
+     * @return true if writing was successful, false otherwise.
+     */
+    virtual bool writeQosToCDRMessage(CDRMessage_t* msg) = 0;
+};
 
 /**
  * @brief Class RTPSMessageCreator, allows the generation of serialized CDR RTPS Messages.
@@ -57,7 +68,7 @@ class RTPSMessageCreator
          * @param vendorId Vendor Id.
          * @return True if correct.
          */
-        static bool addHeader(CDRMessage_t*msg ,const GuidPrefix_t& Prefix,ProtocolVersion_t version,VendorId_t vendorId);
+        static bool addHeader(CDRMessage_t*msg ,const GuidPrefix_t& Prefix,const ProtocolVersion_t& version,const VendorId_t& vendorId);
 
         /**
          * Create a Header to the serialized message.
@@ -67,6 +78,14 @@ class RTPSMessageCreator
          */
         static bool addHeader(CDRMessage_t*msg ,const GuidPrefix_t& Prefix);
 
+        /**
+         * Add a custom content to the serialized message.
+         * @param msg Pointer to the Message.
+         * @param content content to create.
+         * @param contentSize size of the content.
+         * @return True if correct.
+         */
+        static bool addCustomContent(CDRMessage_t*msg, const octet* content, const size_t contentSize);
         /**
          * Create SubmessageHeader.
          * @param msg Pointer to the CDRMessage.
@@ -90,15 +109,15 @@ class RTPSMessageCreator
         /// @{
 
         static bool addMessageData(CDRMessage_t* msg, GuidPrefix_t& guidprefix, const CacheChange_t* change,
-                TopicKind_t topicKind, const EntityId_t& readerId, bool expectsInlineQos, ParameterList_t* inlineQos);
+                TopicKind_t topicKind, const EntityId_t& readerId, bool expectsInlineQos, InlineQosWriter* inlineQos);
         static bool addSubmessageData(CDRMessage_t* msg, const CacheChange_t* change,
-                TopicKind_t topicKind, const EntityId_t& readerId, bool expectsInlineQos, ParameterList_t* inlineQos);
+                TopicKind_t topicKind, const EntityId_t& readerId, bool expectsInlineQos, InlineQosWriter* inlineQos);
 
         static bool addMessageDataFrag(CDRMessage_t* msg, GuidPrefix_t& guidprefix, const CacheChange_t* change, uint32_t fragment_number,
-                TopicKind_t topicKind, const EntityId_t& readerId, bool expectsInlineQos, ParameterList_t* inlineQos);
+                TopicKind_t topicKind, const EntityId_t& readerId, bool expectsInlineQos, InlineQosWriter* inlineQos);
         static bool addSubmessageDataFrag(CDRMessage_t* msg, const CacheChange_t* change, uint32_t fragment_number,
                 uint32_t sample_size, TopicKind_t topicKind, const EntityId_t& readerId, bool expectsInlineQos,
-                ParameterList_t* inlineQos);
+                InlineQosWriter* inlineQos);
 
         static bool addMessageGap(CDRMessage_t* msg, const GuidPrefix_t& guidprefix, const GuidPrefix_t& remoteGuidPrefix,
                 const SequenceNumber_t& seqNumFirst, const SequenceNumberSet_t& seqNumList,const EntityId_t& readerId,const EntityId_t& writerId);
@@ -131,12 +150,12 @@ class RTPSMessageCreator
         static bool addSubmessageNackFrag(CDRMessage_t* msg,
                 const EntityId_t& readerId, const EntityId_t& writerId, SequenceNumber_t& writerSN, FragmentNumberSet_t fnState, int32_t count);
 
-        static bool addSubmessageInfoTS(CDRMessage_t* msg,Time_t& time,bool invalidateFlag);
+        static bool addSubmessageInfoTS(CDRMessage_t* msg, const Time_t &time, bool invalidateFlag);
         static bool addSubmessageInfoTS_Now(CDRMessage_t* msg,bool invalidateFlag);
 
-        static bool addSubmessageInfoDST(CDRMessage_t* msg, GuidPrefix_t guidP);
+        static bool addSubmessageInfoSRC(CDRMessage_t* msg, const ProtocolVersion_t& version, const VendorId_t& vendorId, const GuidPrefix_t& guidP);
+        static bool addSubmessageInfoDST(CDRMessage_t* msg, const GuidPrefix_t& guidP);
 };
-
 }
 } /* namespace rtps */
 } /* namespace eprosima */

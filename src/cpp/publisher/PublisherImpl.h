@@ -13,7 +13,7 @@
 // limitations under the License.
 
 /**
- * @file Publisher.h 	
+ * @file Publisher.h
  */
 
 
@@ -30,6 +30,8 @@
 #include <fastrtps/publisher/PublisherHistory.h>
 
 #include <fastrtps/rtps/writer/WriterListener.h>
+#include <fastrtps/rtps/timedevent/TimedCallback.h>
+#include <fastrtps/qos/DeadlineMissedStatus.h>
 
 namespace eprosima {
 namespace fastrtps{
@@ -38,8 +40,6 @@ namespace rtps
 class RTPSWriter;
 class RTPSParticipant;
 }
-
-
 
 class TopicDataType;
 class PublisherListener;
@@ -60,27 +60,35 @@ class PublisherImpl
      * Create a publisher, assigning its pointer to the associated writer.
      * Don't use directly, create Publisher using DomainRTPSParticipant static function.
      */
-    PublisherImpl(ParticipantImpl* p,TopicDataType* ptype,
-            PublisherAttributes& att,PublisherListener* p_listen = nullptr);
+    PublisherImpl(
+        ParticipantImpl* p,
+        TopicDataType* ptype,
+        const PublisherAttributes& att,
+        PublisherListener* p_listen = nullptr);
 
     virtual ~PublisherImpl();
 
     /**
-     * 
+     *
      * @param kind
      * @param  Data
      * @return
      */
-    bool create_new_change(rtps::ChangeKind_t kind, void* Data);
+    bool create_new_change(
+        rtps::ChangeKind_t kind,
+        void* Data);
 
     /**
-     * 
+     *
      * @param kind
      * @param  Data
      * @param wparams
      * @return
      */
-    bool create_new_change_with_params(rtps::ChangeKind_t kind, void* Data, rtps::WriteParams &wparams);
+    bool create_new_change_with_params(
+        rtps::ChangeKind_t kind,
+        void* Data,
+        rtps::WriteParams& wparams);
 
     /**
      * Removes the cache change with the minimum sequence number
@@ -95,7 +103,7 @@ class PublisherImpl
     bool removeAllChange(size_t* removed);
 
     /**
-     * 
+     *
      * @return
      */
     const rtps::GUID_t& getGuid();
@@ -105,7 +113,7 @@ class PublisherImpl
      * @param att Reference to a PublisherAttributes object to update the parameters;
      * @return True if correctly updated, false if ANY of the updated parameters cannot be updated
      */
-    bool updateAttributes(PublisherAttributes& att);
+    bool updateAttributes(const PublisherAttributes& att);
 
     /**
      * Get the Attributes of the Subscriber.
@@ -119,9 +127,13 @@ class PublisherImpl
      */
     TopicDataType* getType() {return mp_type;};
 
-    bool try_remove_change(std::unique_lock<std::recursive_mutex>& lock);
+    bool wait_for_all_acked(const Time_t& max_wait);
 
-    bool wait_for_all_acked(const rtps::Time_t& max_wait);
+    /**
+     * @brief Returns the offered deadline missed status
+     * @param Deadline missed status struct
+     */
+    void get_offered_deadline_missed_status(OfferedDeadlineMissedStatus& status);
 
     private:
     ParticipantImpl* mp_participant;
@@ -142,6 +154,7 @@ class PublisherImpl
             PublisherWriterListener(PublisherImpl* p):mp_publisherImpl(p){};
             virtual ~PublisherWriterListener(){};
             void onWriterMatched(rtps::RTPSWriter* writer, rtps::MatchingInfo& info);
+            void onWriterChangeReceivedByAll(rtps::RTPSWriter* writer, rtps::CacheChange_t* change);
             PublisherImpl* mp_publisherImpl;
     }m_writerListener;
 
@@ -150,6 +163,35 @@ class PublisherImpl
 	rtps::RTPSParticipant* mp_rtpsParticipant;
 
     uint32_t high_mark_for_frag_;
+
+    //! A timer used to check for deadlines
+    rtps::TimedCallback deadline_timer_;
+    //! Deadline duration in microseconds
+    std::chrono::duration<double, std::ratio<1,1000000>> deadline_duration_us_;
+    //! The current timer owner, i.e. the instance which started the deadline timer
+    rtps::InstanceHandle_t timer_owner_;
+    //! The offered deadline missed status
+    OfferedDeadlineMissedStatus deadline_missed_status_;
+
+    //! A timed callback to remove expired samples for lifespan QoS
+    rtps::TimedCallback lifespan_timer_;
+    //! The lifespan duration, in microseconds
+    std::chrono::duration<double, std::ratio<1, 1000000>> lifespan_duration_us_;
+
+    /**
+     * @brief A method called when an instance misses the deadline
+     */
+    void deadline_missed();
+
+    /**
+     * @brief A method to reschedule the deadline timer
+     */
+    void deadline_timer_reschedule();
+
+    /**
+     * @brief A method to remove expired samples, invoked when the lifespan timer expires
+     */
+    void lifespan_expired();
 };
 
 
