@@ -21,7 +21,7 @@ using namespace eprosima::fastrtps;
 using namespace eprosima::fastrtps::rtps;
 
 // Test created to check bug #1568 (Github #34)
-BLACKBOXTEST(BlackBox, PubSubAsNonReliableKeepLastReaderSmallDepth)
+TEST(BlackBox, PubSubAsNonReliableKeepLastReaderSmallDepth)
 {
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
@@ -64,7 +64,7 @@ BLACKBOXTEST(BlackBox, PubSubAsNonReliableKeepLastReaderSmallDepth)
 }
 
 //Test created to deal with Issue 39 on Github
-BLACKBOXTEST(BlackBox, CacheChangeReleaseTest)
+TEST(BlackBox, CacheChangeReleaseTest)
 {
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
@@ -104,7 +104,7 @@ BLACKBOXTEST(BlackBox, CacheChangeReleaseTest)
 }
 
 // Test created to check bug #1555 (Github #31)
-BLACKBOXTEST(BlackBox, PubSubAsReliableKeepLastReaderSmallDepth)
+TEST(BlackBox, PubSubAsReliableKeepLastReaderSmallDepth)
 {
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
@@ -151,7 +151,7 @@ BLACKBOXTEST(BlackBox, PubSubAsReliableKeepLastReaderSmallDepth)
 }
 
 // Test created to check bug #1738 (Github #54)
-BLACKBOXTEST(BlackBox, PubSubAsReliableKeepLastWriterSmallDepth)
+TEST(BlackBox, PubSubAsReliableKeepLastWriterSmallDepth)
 {
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
@@ -183,7 +183,7 @@ BLACKBOXTEST(BlackBox, PubSubAsReliableKeepLastWriterSmallDepth)
 }
 
 // Test created to check bug #1558 (Github #33)
-BLACKBOXTEST(BlackBox, PubSubKeepAll)
+TEST(BlackBox, PubSubKeepAll)
 {
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
@@ -230,7 +230,7 @@ BLACKBOXTEST(BlackBox, PubSubKeepAll)
 }
 
 // Test created to check bug #1558 (Github #33)
-BLACKBOXTEST(BlackBox, PubSubKeepAllTransient)
+TEST(BlackBox, PubSubKeepAllTransient)
 {
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
@@ -277,7 +277,7 @@ BLACKBOXTEST(BlackBox, PubSubKeepAllTransient)
     }
 }
 
-BLACKBOXTEST(BlackBox, PubReliableKeepAllSubNonReliable)
+TEST(BlackBox, PubReliableKeepAllSubNonReliable)
 {
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
@@ -309,7 +309,7 @@ BLACKBOXTEST(BlackBox, PubReliableKeepAllSubNonReliable)
 }
 
 //Verify that Cachechanges are removed from History when the a Writer unmatches
-BLACKBOXTEST(BlackBox, StatefulReaderCacheChangeRelease){
+TEST(BlackBox, StatefulReaderCacheChangeRelease){
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
 
@@ -345,7 +345,7 @@ void send_async_data(PubSubWriter<T>& writer, std::list<typename T::type> data_t
     ASSERT_TRUE(data_to_send.empty());
 }
 
-BLACKBOXTEST(BlackBox, PubSubAsReliableMultithreadKeepLast1)
+TEST(BlackBox, PubSubAsReliableMultithreadKeepLast1)
 {
     PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
     PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
@@ -381,5 +381,65 @@ BLACKBOXTEST(BlackBox, PubSubAsReliableMultithreadKeepLast1)
 
     // Block reader until reception finished or timeout.
     reader.block_for_at_least(105);
+}
+
+// Test created to check bug #6319 (Github #708)
+TEST(BlackBox, PubSubAsReliableKeepLastReaderSmallDepthTwoPublishers)
+{
+    PubSubReader<HelloWorldType> reader(TEST_TOPIC_NAME);
+    PubSubWriter<HelloWorldType> writer(TEST_TOPIC_NAME);
+    PubSubWriter<HelloWorldType> writer2(TEST_TOPIC_NAME);
+
+    reader
+        .reliability(RELIABLE_RELIABILITY_QOS)
+        .history_kind(eprosima::fastrtps::KEEP_LAST_HISTORY_QOS)
+        .history_depth(1)
+        .resource_limits_allocated_samples(1)
+        .resource_limits_max_samples(1);
+
+    writer.max_blocking_time({ 120, 0 });
+    writer2.max_blocking_time({ 120, 0 });
+
+    reader.init();
+    ASSERT_TRUE(reader.isInitialized());
+
+    writer.init();
+    ASSERT_TRUE(writer.isInitialized());
+
+    writer2.init();
+    ASSERT_TRUE(writer2.isInitialized());
+
+    // Wait for discovery.
+    writer.wait_discovery();
+    writer2.wait_discovery();
+    reader.wait_discovery();
+
+    HelloWorld data;
+    data.message("Hello world!");
+
+    // First writer sends two samples (reader would only keep the last one)
+    data.index(1u);
+    ASSERT_TRUE(writer.send_sample(data));
+    data.index(2u);
+    ASSERT_TRUE(writer.send_sample(data));
+
+    // Wait for reader to acknowledge samples
+    while (!writer.waitForAllAcked(std::chrono::milliseconds(100)))
+    {
+    }
+
+    // Second writer sends one sample (reader should discard previous one)
+    data.index(3u);
+    ASSERT_TRUE(writer2.send_sample(data));
+
+    // Wait for reader to acknowledge sample
+    while (!writer2.waitForAllAcked(std::chrono::milliseconds(100)))
+    {
+    }
+
+    // Only last sample should be present
+    HelloWorld received;
+    ASSERT_TRUE(reader.takeNextData(&received, nullptr));
+    ASSERT_EQ(received.index(), 3u);
 }
 

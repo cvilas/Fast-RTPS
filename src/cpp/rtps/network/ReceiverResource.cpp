@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <fastrtps/rtps/network/ReceiverResource.h>
-#include <fastrtps/rtps/messages/MessageReceiver.h>
+#include <fastdds/rtps/network/ReceiverResource.h>
+#include <fastdds/rtps/messages/MessageReceiver.h>
 #include <cassert>
 #include <fastrtps/log/Log.h>
 
@@ -26,7 +26,10 @@ namespace fastrtps{
 namespace rtps{
 
 ReceiverResource::ReceiverResource(TransportInterface& transport, const Locator_t& locator, uint32_t max_size)
-        : mValid(false)
+        : Cleanup(nullptr)
+        , LocatorMapsToManagedChannel(nullptr)
+        , mValid(false)
+        , mtx()
         , receiver(nullptr)
         , msg(0)
 {
@@ -98,12 +101,16 @@ void ReceiverResource::OnDataReceived(const octet * data, const uint32_t size,
 
 }
 
-ReceiverResource::~ReceiverResource()
+void ReceiverResource::disable()
 {
     if (Cleanup)
     {
         Cleanup();
     }
+}
+
+ReceiverResource::~ReceiverResource()
+{
 }
 
 } // namespace rtps

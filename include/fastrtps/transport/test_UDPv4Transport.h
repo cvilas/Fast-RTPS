@@ -15,12 +15,12 @@
 #ifndef TEST_UDPV4_TRANSPORT_H
 #define TEST_UDPV4_TRANSPORT_H
 #include <fastrtps/transport/UDPv4Transport.h>
-#include <fastrtps/rtps/messages/RTPS_messages.h>
-#include <fastrtps/rtps/common/SequenceNumber.h>
-#include <fastrtps/rtps/messages/CDRMessage.h>
+#include <fastdds/rtps/messages/RTPS_messages.h>
+#include <fastdds/rtps/common/SequenceNumber.h>
+#include <fastdds/rtps/messages/CDRMessage.h>
 #include <vector>
 
-#include "test_UDPv4TransportDescriptor.h"
+#include <fastrtps/transport/test_UDPv4TransportDescriptor.h>
 
 namespace eprosima{
 namespace fastrtps{
@@ -41,12 +41,14 @@ public:
            uint32_t send_buffer_size,
            eProsimaUDPSocket& socket,
            const Locator_t& remote_locator,
-           bool only_multicast_purpose) override;
+           bool only_multicast_purpose,
+           const std::chrono::microseconds& timeout) override;
 
     RTPS_DllAPI static bool test_UDPv4Transport_ShutdownAllNetwork;
     // Handle to a persistent log of dropped packets. Defaults to length 0 (no logging) to prevent wasted resources.
     RTPS_DllAPI static std::vector<std::vector<octet> > test_UDPv4Transport_DropLog;
     RTPS_DllAPI static uint32_t test_UDPv4Transport_DropLogLength;
+    RTPS_DllAPI static bool always_drop_participant_builtin_topic_data;
 
 private:
 

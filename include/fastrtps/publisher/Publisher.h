@@ -20,12 +20,12 @@
 #ifndef PUBLISHER_H_
 #define PUBLISHER_H_
 
-#include "../fastrtps_dll.h"
-#include "../rtps/common/Guid.h"
-#include "../rtps/common/Time_t.h"
-#include "../attributes/PublisherAttributes.h"
-#include "../qos/DeadlineMissedStatus.h"
-#include "../qos/LivelinessLostStatus.h"
+#include <fastrtps/fastrtps_dll.h>
+#include <fastdds/rtps/common/Guid.h>
+#include <fastdds/rtps/common/Time_t.h>
+#include <fastrtps/attributes/PublisherAttributes.h>
+#include <fastrtps/qos/DeadlineMissedStatus.h>
+#include <fastrtps/qos/LivelinessLostStatus.h>
 
 namespace eprosima {
 namespace fastrtps {
@@ -34,8 +34,10 @@ namespace rtps
 {
     struct GUID_t;
     class WriteParams;
+    class RTPSParticipant;
 }
 
+class Participant;
 class PublisherImpl;
 
 /**
@@ -48,31 +50,36 @@ class RTPS_DllAPI Publisher
     virtual ~Publisher();
 
 public:
+
     /**
      * Constructor from a PublisherImpl pointer
      * @param pimpl Actual implementation of the publisher
      */
     Publisher(PublisherImpl* pimpl);
 
-    /**
-     * Write data to the topic.
-     * @param Data Pointer to the data
-     * @return True if correct
+    /*!
+     * @brief Writes a sample of the topic.
+     * @param sample Pointer to the sample.
+     * @return true when operation works successfully.
+     * @note This method is blocked for a period of time.
+     * ReliabilityQosPolicy.max_blocking_time on PublisherAttributes defines this period of time.
      * @par Calling example:
      * @snippet fastrtps_example.cpp ex_PublisherWrite
      */
-    bool write(void* Data);
+    bool write(void* sample);
 
-    /**
-     * Write data with params to the topic.
-     * @param Data Pointer to the data
+    /*!
+     * @brief Writes a sample of the topic with additional options.
+     * @param sample Pointer to the sample.
      * @param wparams Extra write parameters.
-     * @return True if correct
+     * @return true when operation works successfully.
+     * @note This method is blocked for a period of time.
+     * ReliabilityQosPolicy.max_blocking_time on PublisherAttributes defines this period of time.
      * @par Calling example:
      * @snippet fastrtps_example.cpp ex_PublisherWrite
      */
     bool write(
-            void* Data,
+            void* sample,
             rtps::WriteParams& wparams);
 
     /**
@@ -106,7 +113,7 @@ public:
     * @param max_wait Maximum time to wait until all changes are acknowledged.
     * @return True if all were acknowledged.
     */
-    bool wait_for_all_acked(const Time_t& max_wait);
+    bool wait_for_all_acked(const Duration_t& max_wait);
 
     /**
      * Get the GUID_t of the associated RTPSWriter.

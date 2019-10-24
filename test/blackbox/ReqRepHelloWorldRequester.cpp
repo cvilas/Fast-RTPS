@@ -38,16 +38,9 @@ ReqRepHelloWorldRequester::ReqRepHelloWorldRequester(): reply_listener_(*this), 
     participant_(nullptr), reply_subscriber_(nullptr), request_publisher_(nullptr),
     initialized_(false), matched_(0)
 {
-#if defined(PREALLOCATED_WITH_REALLOC_MEMORY_MODE_TEST)
-            sattr.historyMemoryPolicy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
-            puattr.historyMemoryPolicy = PREALLOCATED_WITH_REALLOC_MEMORY_MODE;
-#elif defined(DYNAMIC_RESERVE_MEMORY_MODE_TEST)
-            sattr.historyMemoryPolicy = DYNAMIC_RESERVE_MEMORY_MODE;
-            puattr.historyMemoryPolicy = DYNAMIC_RESERVE_MEMORY_MODE;
-#else
-            sattr.historyMemoryPolicy = PREALLOCATED_MEMORY_MODE;
-            puattr.historyMemoryPolicy = PREALLOCATED_MEMORY_MODE;
-#endif
+    // By default, memory mode is preallocated (the most restritive)
+    sattr.historyMemoryPolicy = PREALLOCATED_MEMORY_MODE;
+    puattr.historyMemoryPolicy = PREALLOCATED_MEMORY_MODE;
 }
 
 ReqRepHelloWorldRequester::~ReqRepHelloWorldRequester()
@@ -77,6 +70,34 @@ void ReqRepHelloWorldRequester::init()
     puattr.topic.topicKind = NO_KEY;
     puattr.topic.topicDataType = "HelloWorldType";
     configPublisher("Request");
+    request_publisher_ = Domain::createPublisher(participant_, puattr, &request_listener_);
+    ASSERT_NE(request_publisher_, nullptr);
+
+    initialized_ = true;
+}
+
+void ReqRepHelloWorldRequester::init_with_latency(
+        const eprosima::fastrtps::Duration_t& latency_budget_duration_pub,
+        const eprosima::fastrtps::Duration_t& latency_budget_duration_sub)
+{
+    ParticipantAttributes pattr;
+    participant_ = Domain::createParticipant(pattr);
+    ASSERT_NE(participant_, nullptr);
+
+    // Register type
+    ASSERT_EQ(Domain::registerType(participant_,&type_), true);
+
+    //Create subscriber
+    sattr.topic.topicKind = NO_KEY;
+    sattr.topic.topicDataType = "HelloWorldType";
+    sattr.qos.m_latencyBudget.duration = latency_budget_duration_sub;
+    reply_subscriber_ = Domain::createSubscriber(participant_, sattr, &reply_listener_);
+    ASSERT_NE(reply_subscriber_, nullptr);
+
+    //Create publisher
+    puattr.topic.topicKind = NO_KEY;
+    puattr.topic.topicDataType = "HelloWorldType";
+    puattr.qos.m_latencyBudget.duration = latency_budget_duration_pub;
     request_publisher_ = Domain::createPublisher(participant_, puattr, &request_listener_);
     ASSERT_NE(request_publisher_, nullptr);
 

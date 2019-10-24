@@ -15,12 +15,12 @@
 #ifndef XML_PARSER_H_
 #define XML_PARSER_H_
 
-#include "stdio.h"
-#include "../transport/TransportDescriptorInterface.h"
-#include "../attributes/ParticipantAttributes.h"
-#include "../attributes/PublisherAttributes.h"
-#include "../attributes/SubscriberAttributes.h"
-#include "./XMLParserCommon.h"
+#include <stdio.h>
+#include <fastrtps/transport/TransportDescriptorInterface.h>
+#include <fastrtps/attributes/ParticipantAttributes.h>
+#include <fastrtps/attributes/PublisherAttributes.h>
+#include <fastrtps/attributes/SubscriberAttributes.h>
+#include <fastrtps/xmlparser/XMLParserCommon.h>
 #include <fastrtps/types/DynamicTypeBuilderPtr.h>
 #include <fastrtps/attributes/ParticipantAttributes.h>
 #include <fastrtps/attributes/PublisherAttributes.h>
@@ -438,6 +438,26 @@ class XMLParser
         rtps::PortParameters& port,
         uint8_t ident);
 
+    RTPS_DllAPI static XMLP_ret getXMLParticipantAllocationAttributes(
+        tinyxml2::XMLElement* elem,
+        rtps::RTPSParticipantAllocationAttributes& allocation,
+        uint8_t ident);
+
+    RTPS_DllAPI static XMLP_ret getXMLRemoteLocatorsAllocationAttributes(
+        tinyxml2::XMLElement* elem,
+        rtps::RemoteLocatorsAllocationAttributes& allocation,
+        uint8_t ident);
+
+    RTPS_DllAPI static XMLP_ret getXMLDiscoverySettings(
+        tinyxml2::XMLElement* elem,
+        rtps::DiscoverySettings& settings,
+        uint8_t ident);
+
+    RTPS_DllAPI static XMLP_ret getXMLInitialAnnouncementsConfig(
+        tinyxml2::XMLElement* elem,
+        rtps::InitialAnnouncementConfig& config,
+        uint8_t ident);
+
     RTPS_DllAPI static XMLP_ret getXMLBuiltinAttributes(
         tinyxml2::XMLElement* elem,
         rtps::BuiltinAttributes& builtin,
@@ -468,6 +488,21 @@ class XMLParser
         bool* b,
         uint8_t ident);
 
+    RTPS_DllAPI static XMLP_ret getXMLEnum(
+        tinyxml2::XMLElement* elem,
+        rtps::DiscoveryProtocol_t * e,
+        uint8_t ident);
+
+    RTPS_DllAPI static XMLP_ret getXMLList(
+        tinyxml2::XMLElement* elem,
+        rtps::RemoteServerList_t & list,
+        uint8_t ident);
+
+    RTPS_DllAPI static XMLP_ret getXMLRemoteServer(
+        tinyxml2::XMLElement* elem,
+        rtps::RemoteServerAttributes & server,
+        uint8_t ident);
+
     RTPS_DllAPI static XMLP_ret getXMLString(
         tinyxml2::XMLElement* elem,
         std::string* s,
@@ -481,6 +516,11 @@ class XMLParser
     RTPS_DllAPI static XMLP_ret getXMLDisablePositiveAcksQos(
         tinyxml2::XMLElement* elem,
         DisablePositiveACKsQosPolicy& disablePositiveAcks,
+        uint8_t ident);
+
+    RTPS_DllAPI static XMLP_ret getXMLguidPrefix(
+        tinyxml2::XMLElement *elem,
+        rtps::GuidPrefix_t &prefix,
         uint8_t ident);
 };
 

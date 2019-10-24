@@ -19,7 +19,9 @@
 #include <fastrtps/transport/TransportReceiverInterface.h>
 #include <fastrtps/transport/ChannelResource.h>
 #include <fastrtps/transport/tcp/RTCPMessageManager.h>
-#include <fastrtps/rtps/common/Locator.h>
+#include <fastdds/rtps/common/Locator.h>
+
+#include <asio.hpp>
 
 namespace eprosima{
 namespace fastrtps{
@@ -137,8 +139,6 @@ public:
     virtual void shutdown(asio::socket_base::shutdown_type what) = 0;
 
     TCPConnectionType tcp_connection_type() const { return tcp_connection_type_; }
-
-    virtual ~TCPChannelResource();
 
 protected:
 
